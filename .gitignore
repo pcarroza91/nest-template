@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+dist/
+coverage/
+
+# pnpm-lock.yaml SÍ se versiona: es lo que hace reproducible el install.
+*.log
+.env
+.env.local
+.env.*.local
+*.sqlite
+*.sqlite3
+*.tsbuildinfo
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

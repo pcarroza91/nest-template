@@ -1,0 +1,868 @@
+openapi: 3.0.3
+info:
+  title: Numerus Verify — Identity Service API
+  description: >
+    API de identidad, autenticación y autorización para Numerus Verify.
+    Todo tráfico desde Portal Cliente o Backoffice pasa por el API Gateway antes
+    de llegar a este servicio. Las rutas bajo /internal solo son alcanzables
+    por otros microservicios vía red interna (mTLS), nunca a través del Gateway.
+  version: "1.0.0"
+  contact:
+    name: Numerus Verify — Equipo de Arquitectura
+
+servers:
+  - url: https://api.numerusverify.cl
+    description: Producción (vía API Gateway) — el prefijo /api/v1 ya va en cada path
+  - url: https://internal.identity.numerusverify.local
+    description: Red interna — solo microservicios
+
+tags:
+  - name: Organizations
+    description: Ciclo de vida de la organización (sostenedor) a nivel de identidad
+  - name: Auth
+    description: Autenticación — login, SSO, verificación, recuperación de contraseña
+  - name: Users
+    description: Gestión de usuarios
+  - name: Backoffice
+    description: Gestión exclusiva de empleados y cartera de Backoffice
+  - name: AuthMethods
+    description: Métodos de autenticación y doble factor
+  - name: Sessions
+    description: Gestión de sesiones activas
+  - name: RoleAssignments
+    description: Asignación de cargos (roles) a usuarios
+  - name: PermissionOverrides
+    description: Excepciones puntuales de permisos
+  - name: Internal
+    description: Endpoints de uso exclusivo entre microservicios (sin Gateway)
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- Organizations
+  /api/v1/organizations/{id}/transfer-ownership:
+    patch:
+      operationId: transferOwnership
+      tags: [Organizations]
+      summary: Transferir la titularidad de la organización
+      description: RF23 — El Titular actual transfiere su condición a otro administrador activo, de forma atómica.
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferOwnershipRequest' }
+      responses:
+        '200':
+          description: Titularidad transferida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferOwnershipResponse' }
+        '400':
+          description: El destinatario no es un administrador activo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: El solicitante no es el Titular actual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- Auth
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Login con email y contraseña
+      description: RF5
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '423':
+          description: Cuenta bloqueada temporalmente (RF9)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/auth/sso:
+    post:
+      operationId: loginSso
+      tags: [Auth]
+      summary: Login mediante proveedor SSO
+      description: RF6 — Google / Microsoft, extensible a nuevos proveedores vía auth_method_type.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SsoLoginRequest' }
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '404':
+          description: No existe AuthMethod vinculado — ofrecer flujo de vinculación
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [Auth]
+      summary: Verificar correo electrónico
+      description: RF9.1
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Correo verificado, cuenta activa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifyEmailResponse' }
+        '400':
+          description: Token inválido o vencido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/auth/password-reset/request:
+    post:
+      operationId: requestPasswordReset
+      tags: [Auth]
+      summary: Solicitar reset de contraseña
+      description: RF7
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetRequestDto' }
+      responses:
+        '200':
+          description: Si el email existe, se envió un correo con instrucciones
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+
+  /api/v1/auth/password-reset/confirm:
+    post:
+      operationId: confirmPasswordReset
+      tags: [Auth]
+      summary: Confirmar nueva contraseña
+      description: RF7
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetConfirmRequest' }
+      responses:
+        '200':
+          description: Contraseña actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+        '400':
+          description: Token inválido o vencido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- Users
+  /api/v1/users:
+    post:
+      operationId: createUser
+      tags: [Users]
+      summary: Crear un usuario (primer admin o adicional)
+      description: RF1 (primer admin, Titular) / RF2 (usuario adicional, requiere portal.user.manage)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '409':
+          description: Email ya existe para esa organización
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/users/{id}/schools:
+    post:
+      operationId: assignSchool
+      tags: [Users]
+      summary: Asignar un colegio existente a un usuario
+      description: RF3 — Nunca crea un colegio nuevo; valida contra Academic Service.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignSchoolRequest' }
+      responses:
+        '201':
+          description: Colegio asignado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolMembershipResponse' }
+        '400':
+          description: El colegio no pertenece a la organización del usuario
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/users/{id}/anonymize:
+    post:
+      operationId: anonymizeUser
+      tags: [Users]
+      summary: Anonimizar datos personales (derecho al olvido)
+      description: >
+        RF20 — Reemplaza nombre y correo por valores no identificables, revoca todos
+        los AuthMethod. NUNCA ejecuta DELETE. El id (uuid) se conserva intacto.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Usuario anonimizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+        '403':
+          description: Solicitud sin validación legal previa
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/users/{id}/access-history:
+    get:
+      operationId: getAccessHistory
+      tags: [Users]
+      summary: Historial de acceso (propio o retroactivo)
+      description: >
+        RF17 (propio, sin parámetro date) / RF19.1 (retroactivo, con parámetro date —
+        reconstruye el conjunto de permisos efectivos vigentes en esa fecha).
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: Fecha pasada a reconstruir. Si se omite, se retorna el estado actual.
+      responses:
+        '200':
+          description: Historial de acceso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccessHistory' }
+
+  /api/v1/organizations/{id}/users:
+    get:
+      operationId: listOrganizationUsers
+      tags: [Users]
+      summary: Listar usuarios de una organización
+      description: RF18 — requiere permiso de lectura sobre esa organización.
+      parameters:
+        - $ref: '#/components/parameters/OrgId'
+      responses:
+        '200':
+          description: Lista de usuarios y sus roles
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserListResponse' }
+
+  # ---------------------------------------------------------------- Backoffice
+  /api/v1/backoffice/users:
+    post:
+      operationId: createBackofficeUser
+      tags: [Backoffice]
+      summary: Crear un empleado de Backoffice
+      description: RF4 — Solo puede crearlo otro usuario ya autenticado como Backoffice (organization_id = NULL).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBackofficeUserRequest' }
+      responses:
+        '201':
+          description: Empleado creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '403':
+          description: El solicitante no es un usuario de Backoffice
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/backoffice-client-access:
+    post:
+      operationId: createBackofficeClientAccess
+      tags: [Backoffice]
+      summary: Restringir la cartera de clientes de un empleado
+      description: RF15 — Requiere backoffice.client.manage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBackofficeClientAccessRequest' }
+      responses:
+        '201':
+          description: Cartera restringida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BackofficeClientAccessResponse' }
+
+  # ---------------------------------------------------------------- AuthMethods
+  /api/v1/users/me/mfa:
+    post:
+      operationId: initiateMfaActivation
+      tags: [AuthMethods]
+      summary: Iniciar activación de doble factor
+      description: RF8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaActivateRequest' }
+      responses:
+        '200':
+          description: Secreto / código de configuración generado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaActivateResponse' }
+
+  /api/v1/users/me/mfa/{id}:
+    patch:
+      operationId: verifyMfaActivation
+      tags: [AuthMethods]
+      summary: Confirmar doble factor con código
+      description: RF8 — Transiciona el MFAMethod de no-verificado a verificado.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaVerifyRequest' }
+      responses:
+        '200':
+          description: 2FA activado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+        '400':
+          description: Código incorrecto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/auth-methods/{id}:
+    patch:
+      operationId: updateAuthMethodStatus
+      tags: [AuthMethods]
+      summary: Revocar (u otro cambio de estado de) un método de autenticación
+      description: RF10.1 — El propio usuario, o un Administrador sobre otros usuarios de su organización.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAuthMethodStatusRequest' }
+      responses:
+        '200':
+          description: Método actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+        '403':
+          description: Sin autoridad sobre ese método
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- Sessions
+  /api/v1/sessions/{id}:
+    delete:
+      operationId: revokeSession
+      tags: [Sessions]
+      summary: Cerrar una sesión específica
+      description: >
+        RF10 — Verbo DELETE a nivel de API; internamente nunca se ejecuta un
+        DELETE de base de datos, se marca session.revoked_at (nunca se pierde
+        el registro para auditoría). Idempotente: revocar una sesión ya
+        revocada vuelve a responder 200.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Sesión cerrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+
+  /api/v1/users/me/sessions:
+    delete:
+      operationId: revokeAllSessions
+      tags: [Sessions]
+      summary: Cerrar todas las sesiones del usuario actual
+      description: RF10 — Mismo criterio que el DELETE individual, aplicado a toda la colección.
+      responses:
+        '200':
+          description: Todas las sesiones cerradas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckResponse' }
+
+  # ---------------------------------------------------------------- RoleAssignments
+  /api/v1/role-assignments:
+    post:
+      operationId: createRoleAssignment
+      tags: [RoleAssignments]
+      summary: Asignar un cargo a un usuario
+      description: RF13 — Requiere portal.role.manage; solo roles de contexto portal, misma organización.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRoleAssignmentRequest' }
+      responses:
+        '201':
+          description: Cargo asignado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleAssignment' }
+        '403':
+          description: Rol de contexto backoffice, o usuario de otra organización
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/v1/role-assignments/{id}:
+    patch:
+      operationId: updateRoleAssignmentStatus
+      tags: [RoleAssignments]
+      summary: Suspender o revocar un cargo
+      description: >
+        RF13 — Validado contra dos invariantes antes de aplicarse:
+        RF16 (nunca 0 admins activos) y RF22 (el Titular no es revocable por terceros).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRoleAssignmentStatusRequest' }
+      responses:
+        '200':
+          description: Cargo actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoleAssignment' }
+        '409':
+          description: >
+            La operación dejaría a la organización sin administrador activo (RF16),
+            o el RoleAssignment pertenece al Titular (RF22)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- PermissionOverrides
+  /api/v1/permission-overrides:
+    post:
+      operationId: createPermissionOverride
+      tags: [PermissionOverrides]
+      summary: Otorgar una excepción de permiso puntual
+      description: >
+        RF14a (Backoffice, sin restricción de organización) / RF14b (Administrador,
+        solo su propia organización y permisos de contexto portal). Solo ALLOW.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePermissionOverrideRequest' }
+      responses:
+        '201':
+          description: Excepción otorgada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PermissionOverride' }
+        '403':
+          description: Usuario destino fuera de tu organización, o permiso de contexto backoffice
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- Internal
+  /api/v1/internal/authorize:
+    post:
+      operationId: internalAuthorize
+      tags: [Internal]
+      summary: Resolver si un usuario puede ejecutar una acción sobre un recurso
+      description: >
+        RF12 — Llamado por otros microservicios (ej. Financing Engine) vía red interna
+        (mTLS a nivel de infraestructura/service mesh), nunca a través del API Gateway.
+        No aplica autenticación JWT de usuario final — la seguridad de transporte la
+        garantiza la malla de servicios, fuera del alcance de esta especificación OpenAPI.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InternalAuthorizeRequest' }
+      responses:
+        '200':
+          description: Decisión de autorización
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalAuthorizeResponse' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OrgId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    # ---------- Genéricos ----------
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    AckResponse:
+      description: Confirmación genérica para operaciones sin cuerpo de respuesta sustantivo.
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+
+    # ---------- Organizations ----------
+    TransferOwnershipRequest:
+      type: object
+      required: [new_owner_role_assignment_id]
+      properties:
+        new_owner_role_assignment_id: { type: string, format: uuid }
+
+    TransferOwnershipResponse:
+      type: object
+      required: [previous_owner_role_assignment_id, new_owner_role_assignment_id]
+      properties:
+        previous_owner_role_assignment_id: { type: string, format: uuid }
+        new_owner_role_assignment_id: { type: string, format: uuid }
+
+    # ---------- Auth ----------
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+        organization_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Requerido si el email existe en más de una organización.
+
+    SsoLoginRequest:
+      type: object
+      required: [provider, external_provider_id]
+      properties:
+        provider: { type: string, enum: [GOOGLE, MICROSOFT] }
+        external_provider_id: { type: string }
+
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token, expires_in]
+      properties:
+        access_token: { type: string, description: "JWT de corta duración" }
+        refresh_token: { type: string }
+        expires_in: { type: integer }
+
+    VerifyEmailResponse:
+      type: object
+      required: [ok, status]
+      properties:
+        ok: { type: boolean }
+        status: { type: string, enum: [ACTIVO] }
+
+    PasswordResetRequestDto:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    PasswordResetConfirmRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token: { type: string }
+        new_password: { type: string, format: password }
+
+    # ---------- Users ----------
+    CreateUserRequest:
+      type: object
+      required: [email, organization_id]
+      properties:
+        email: { type: string, format: email }
+        full_name: { type: string, nullable: true }
+        organization_id: { type: string, format: uuid }
+        password:
+          type: string
+          format: password
+          nullable: true
+          description: Opcional si el alta se completa por invitación por correo.
+
+    User:
+      type: object
+      required: [id, full_name, email, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        organization_id: { type: string, format: uuid, nullable: true }
+        status: { type: string, enum: [ACTIVO, SUSPENDIDO, REVOCADO, PENDIENTE_VERIFICACION] }
+        email_verified_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    UserListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/User' }
+
+    AssignSchoolRequest:
+      type: object
+      required: [school_id]
+      properties:
+        school_id: { type: string, format: uuid }
+
+    SchoolMembershipResponse:
+      type: object
+      required: [id, user_id, school_id, status]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        school_id: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVO, SUSPENDIDO, REVOCADO] }
+        vigencia_desde: { type: string, format: date, nullable: true }
+        vigencia_hasta: { type: string, format: date, nullable: true }
+
+    AccessHistory:
+      type: object
+      required: [date, role_assignments, auth_methods, sessions]
+      properties:
+        date: { type: string, format: date }
+        role_assignments:
+          type: array
+          items: { $ref: '#/components/schemas/RoleAssignment' }
+        auth_methods:
+          type: array
+          items: { $ref: '#/components/schemas/AuthMethodSummary' }
+        sessions:
+          type: array
+          items: { $ref: '#/components/schemas/SessionSummary' }
+
+    AuthMethodSummary:
+      type: object
+      required: [type, created_at]
+      properties:
+        type: { type: string, enum: [PASSWORD, GOOGLE, MICROSOFT] }
+        created_at: { type: string, format: date-time }
+
+    SessionSummary:
+      type: object
+      required: [device_info, last_used_at]
+      properties:
+        device_info: { type: string, nullable: true }
+        last_used_at: { type: string, format: date-time, nullable: true }
+
+    # ---------- Backoffice ----------
+    CreateBackofficeUserRequest:
+      type: object
+      required: [email, role_id]
+      properties:
+        email: { type: string, format: email }
+        full_name: { type: string, nullable: true }
+        role_id: { type: string, format: uuid }
+
+    CreateBackofficeClientAccessRequest:
+      type: object
+      required: [role_assignment_id, organization_ids]
+      properties:
+        role_assignment_id: { type: string, format: uuid }
+        organization_ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    BackofficeClientAccessResponse:
+      type: object
+      required: [role_assignment_id, organization_ids]
+      properties:
+        role_assignment_id: { type: string, format: uuid }
+        organization_ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    # ---------- AuthMethods / MFA ----------
+    MfaActivateRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [TOTP, SMS] }
+
+    MfaActivateResponse:
+      type: object
+      required: [mfa_method_id]
+      properties:
+        mfa_method_id: { type: string, format: uuid }
+        secret: { type: string, nullable: true, description: "Solo si type=TOTP" }
+        qr_code_url: { type: string, nullable: true }
+
+    MfaVerifyRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }
+
+    UpdateAuthMethodStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [REVOCADO] }
+
+    # ---------- Sessions ----------
+    # (sin DTOs de request — los endpoints de sesión usan DELETE sin body)
+
+    # ---------- RoleAssignments ----------
+    CreateRoleAssignmentRequest:
+      type: object
+      required: [user_id, role_id]
+      properties:
+        user_id: { type: string, format: uuid }
+        role_id: { type: string, format: uuid }
+        module_id:
+          type: integer
+          nullable: true
+          description: Opcional — restringe la asignación a un solo dominio.
+        school_ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    UpdateRoleAssignmentStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [SUSPENDIDO, REVOCADO] }
+
+    RoleAssignment:
+      type: object
+      required: [id, user_id, role_id, status, is_org_owner]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        role_id: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVO, SUSPENDIDO, REVOCADO] }
+        is_org_owner: { type: boolean }
+        module_id: { type: integer, nullable: true }
+        vigencia_desde: { type: string, format: date, nullable: true }
+        vigencia_hasta: { type: string, format: date, nullable: true }
+
+    # ---------- PermissionOverrides ----------
+    CreatePermissionOverrideRequest:
+      type: object
+      required: [user_id, permission_id]
+      properties:
+        user_id: { type: string, format: uuid }
+        permission_id: { type: string, format: uuid }
+        vigencia_hasta: { type: string, format: date, nullable: true }
+
+    PermissionOverride:
+      type: object
+      required: [id, user_id, permission_id, status]
+      properties:
+        id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid }
+        permission_id: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVO, REVOCADO] }
+        vigencia_desde: { type: string, format: date, nullable: true }
+        vigencia_hasta: { type: string, format: date, nullable: true }
+
+    # ---------- Internal ----------
+    InternalAuthorizeRequest:
+      type: object
+      required: [user_id, permission_code]
+      properties:
+        user_id: { type: string, format: uuid }
+        permission_code: { type: string, example: "financing.calculate" }
+        resource:
+          type: object
+          nullable: true
+          properties:
+            school_id: { type: string, format: uuid, nullable: true }
+            organization_id: { type: string, format: uuid, nullable: true }
+
+    InternalAuthorizeResponse:
+      type: object
+      required: [authorized]
+      properties:
+        authorized: { type: boolean }
+        reason: { type: string, nullable: true }

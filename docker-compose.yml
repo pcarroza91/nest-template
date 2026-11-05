@@ -1,0 +1,63 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    container_name: ms-template-api
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      NODE_ENV: prod
+      PORT: 3000
+      API_PREFIX: api
+      APP_NAME: ms-template
+      DB_TYPE: postgres
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_DATABASE: ${DB_DATABASE:-ms_template}
+      DB_SCHEMA: public
+      # synchronize NO se admite con NODE_ENV=prod: la app no arranca si
+      # se pone en true. Hasta que existan migraciones, el esquema hay que
+      # crearlo aparte (ver README, "Esquema de base de datos").
+      DB_SYNCHRONIZE: 'false'
+      # Con NODE_ENV=prod la documentación no se publica aunque esto
+      # esté en true; se deja explícito para que quede claro.
+      DOCS_ENABLED: 'false'
+      # Orígenes autorizados para CORS. Vacío = ningún origen cruzado.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ms-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ms-template-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_DATABASE:-ms_template}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-ms_template}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ms-network
+
+volumes:
+  postgres-data:
+
+networks:
+  ms-network:
+    driver: bridge

@@ -1,0 +1,27 @@
+# pnpm bloquea por defecto los scripts de instalación de las dependencias.
+# Aquí se autoriza, de forma explícita, quién puede compilar binarios nativos.
+#
+# - better-sqlite3: necesario para los tests e2e (sqlite en memoria).
+# - @scarf/scarf:   telemetría de terceros, se deja bloqueada a propósito.
+#
+# Al agregar una dependencia con binario nativo (bcrypt, sharp, etc.), decláralo
+# aquí o `pnpm install` avisará con ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  better-sqlite3: true
+  '@scarf/scarf': false
+
+# Forzado de versiones en dependencias transitivas.
+#
+# js-yaml: @nestjs/swagger lo fija en 5.2.1 EXACTO, y esa versión arrastra
+# GHSA-pm4m-ph32-ghv5 (parseo de tiempo exponencial -> denegación de servicio).
+# No se corrige actualizando @nestjs/swagger: hay que forzarlo desde aquí.
+# 5.2.2 es un patch, así que la API no cambia.
+#
+# OJO: cambiar solo este archivo no siempre dispara la re-resolución; si
+# `pnpm install` responde "Already up to date", corré `pnpm install --force`
+# y verificá con `pnpm audit --prod`.
+#
+# Revisar en cada bump de @nestjs/swagger: cuando publique una versión con el
+# fix, este override deja de hacer falta.
+overrides:
+  js-yaml: '>=5.2.2'
