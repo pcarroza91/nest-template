@@ -378,7 +378,7 @@ una clase `Error` que tapa al `Error` nativo: se importa siempre con alias
 
 ## 14. Configuración y entornos (`src/config`)
 
-Aplica la [§8](architecture/guidelines.md#8-arranque-y-entornos).
+Aplica la [§9](architecture/guidelines.md#9-arranque-y-entornos).
 
 - `env.validation.ts` declara `EnvironmentVariables` y `validateEnv`. Toda variable nueva se agrega
   ahí con tipo explícito (`PORT: number = 3000`) y `@Type(() => Number)` si es numérica; sin
