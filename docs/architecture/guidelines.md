@@ -4,7 +4,8 @@ Arquitectura de referencia para un **microservicio modular** (`ms-<dominio>`): u
 contiene un solo dominio, organizado por módulos. No nombra módulos concretos:
 `docs/architecture.md` muestra cómo se aplica en este template.
 
-Un `ms-` nace de extraer un dominio de un monolito modular.
+Un `ms-` nace de extraer un dominio de un monolito modular (`mm-<nombre>`): la
+[§12](#12-monolito-modular) describe cómo se organiza uno para que esa extracción sea mover una carpeta.
 
 | Término     | Qué es                                                                                                | Ejemplo                 |
 | ----------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -46,16 +47,17 @@ flowchart LR
     end
     GW["«component»<br/>API Gateway"]
     subgraph INT["«zone» Red interna"]
+        UP["«component»<br/>Servicios que lo consumen"]
         MS["«component»<br/>Microservicio"]
-        OTH["«component»<br/>Otros microservicios"]
+        DOWN["«component»<br/>Servicios que consume"]
         DB[("Base de datos<br/>propia")]
     end
 
     C -- "HTTPS + token" --> GW
     GW -- "/api/v1/…" --> MS
-    GW -- "/api/v1/…" --> OTH
-    OTH -- "/api/v1/… · mTLS" --> MS
-    MS -- "orchestrator · HTTP" --> OTH
+    UP -- "/api/v1/… · mTLS" --> MS
+    MS -- "orchestrator · HTTP" --> DOWN
+    DOWN -. "eventos, nunca HTTP de vuelta" .-> MS
     MS -- "lee y escribe" --> DB
 
     classDef zonePub fill:transparent,stroke:#a07c3b,stroke-dasharray:4 3
@@ -68,7 +70,7 @@ flowchart LR
     class INT zoneInt
     class C,DB ext
     class GW gw
-    class OTH other
+    class UP,DOWN other
     class MS main
 ```
 
@@ -78,6 +80,9 @@ flowchart LR
 - Las probes de salud (`/health`) quedan fuera del prefijo y de la versión de la API.
 - Lo que entra de otros servicios usa la misma API de los módulos; lo que sale hacia ellos pasa por
   el orchestrator ([§8](#8-comunicación-con-otros-servicios)).
+- Un mismo servicio no puede estar a ambos lados con llamadas síncronas: si este microservicio lo
+  consume, la dirección de vuelta va por eventos ([§8.4](#84-reglas), regla 12;
+  [§11](#11-eventos)).
 
 ## 3. Capas
 
@@ -741,7 +746,9 @@ src/orchestrator/
 | `models/`                     | Los tipos propios (públicos) y, en `responses/`, las formas crudas del otro servicio (privadas).                                         |
 | `common/`                     | Lo que se repite en toda llamada: cabeceras, timeout y traducción de errores. Cada client solo declara sus llamadas.                     |
 
-El orchestrator no tiene controllers, entidades, base de datos ni reglas de negocio.
+El orchestrator no tiene controllers, entidades, base de datos ni reglas de negocio. En un
+monolito modular, hacia otro dominio del mismo proceso, el client se divide en port y adapters
+([§12.3](#123-orchestrator-con-port-y-adapters)).
 
 ### 8.2. Uso desde un módulo
 
@@ -932,3 +939,230 @@ Se usa un evento en vez de una llamada cuando:
   duplicados.
 
 El sobre del evento, la publicación confiable (outbox) y el broker quedan pendientes de definir.
+
+## 12. Monolito modular
+
+Un **monolito modular** (`mm-<nombre>`) es un solo despliegue con varios dominios. Cada dominio se
+organiza como un microservicio de esta guía, y las §4 a §11 se aplican sin cambios dentro de él. La
+frontera entre dominios se trata como la frontera entre servicios. Un dominio se extrae a
+`ms-<dominio>` moviendo su carpeta.
+
+| Frontera    | Dureza                             | Qué la cruza                                                                                  |
+| ----------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Módulo**  | Blanda: dentro del dominio.        | Su service y sus `models/dto` y `models/enums` ([§6](#6-reglas-de-dependencia-y-privacidad)). |
+| **Dominio** | Dura: como si fuera otro servicio. | Solo su `public/`, y solo desde el orchestrator de otro dominio.                              |
+
+```mermaid
+flowchart LR
+    GW["«component»<br/>API Gateway"]
+    subgraph MM["«component» mm-&lt;nombre&gt; · un proceso"]
+        subgraph D1["dominio enrollment"]
+            M1["modules/"]
+            O1["orchestrator/"]
+        end
+        subgraph D2["dominio academic"]
+            P2["public/"]
+            M2["modules/"]
+        end
+        BUS["bus de eventos<br/>en memoria"]
+    end
+    subgraph DB["«component» Base de datos"]
+        S1[("schema<br/>enrollment")]
+        S2[("schema<br/>academic")]
+    end
+    EXT["«component»<br/>servicio externo"]
+
+    GW -- "/api/enrollment/v1/…" --> M1
+    GW -- "/api/academic/v1/…" --> M2
+    M1 --> O1
+    O1 -- "en proceso" --> P2
+    P2 --> M2
+    O1 -- "HTTP" --> EXT
+    M1 --> S1
+    M2 --> S2
+    M2 -. "publica" .-> BUS
+    BUS -. "entrega" .-> M1
+
+    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
+    classDef main fill:transparent,stroke:#e11d74,stroke-width:3px
+    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
+    classDef gw fill:transparent,stroke:#475569,stroke-width:2px
+    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
+    class D1,D2 pkg
+    class MM main
+    class M1,O1,P2,M2,BUS feature
+    class GW gw
+    class EXT,DB ext
+```
+
+### 12.1. Estructura
+
+```
+src/
+├── domains/
+│   ├── academic/
+│   │   ├── academic-domain.module.ts       # importa sus módulos, su public y su orchestrator
+│   │   ├── public/                         # lo único que otro dominio puede usar
+│   │   │   ├── academic-public.module.ts   # registra y exporta solo la fachada
+│   │   │   ├── academic.facade.ts          # operaciones que ofrece a otros dominios
+│   │   │   └── models/                     # tipos de esas operaciones
+│   │   ├── modules/                        # anatomía de la §4
+│   │   ├── orchestrator/                   # su salida: §8 y §12.3
+│   │   └── migrations/                     # solo tablas de su schema
+│   └── enrollment/
+│       └── …
+├── common/                                 # compartido por todos los dominios, sin dominio
+├── config/
+└── app.module.ts                           # importa los <d>-domain.module
+```
+
+- Un dominio no importa nada de otro dominio salvo desde su `orchestrator/`, y de ese otro solo
+  importa `public/`.
+- `common/` y `config/` son de todos y no tienen dominio, igual que en el microservicio.
+
+### 12.2. `public/`: contrato de un dominio hacia los demás
+
+- **`<d>.facade.ts`** reúne las operaciones que el dominio ofrece a otros dominios
+  (`getCourse`, `reserveSeat`). Es una fachada: delega en los services de sus módulos y no tiene
+  lógica propia.
+- **`models/`** contiene los tipos de esas operaciones. Nunca entidades ni DTOs HTTP: lo que cruza
+  entre dominios no se ata a la forma de una ruta ni de una tabla.
+- **`<d>-public.module.ts`** importa los módulos que la fachada usa y exporta solo la fachada.
+- Nace con la primera operación que otro dominio necesita. Cuando el dominio se extrae, cada
+  operación de la fachada tiene su equivalente en la API HTTP de sus módulos.
+
+### 12.3. Orchestrator con port y adapters
+
+Hacia otro dominio del mismo monolito, el client del orchestrator ([§8](#8-comunicación-con-otros-servicios))
+se divide en un **port** y sus **adapters**:
+
+- **Port:** el contrato de lo que el dominio necesita del otro, con tipos propios. Es lo único que
+  ven los módulos.
+- **Adapter local:** cumple el port llamando en memoria a `public/` del otro dominio.
+- **Adapter HTTP:** cumple el port por HTTP, con todas las reglas de la §8.4. Se usa cuando el otro
+  dominio ya fue extraído.
+
+```
+domains/enrollment/orchestrator/
+├── common/                             # base HTTP de la §8 (para los adapters HTTP)
+└── modules/
+    ├── academic/                       # otro dominio del monolito
+    │   ├── academic-orc.module.ts      # elige el adapter · exporta solo el port
+    │   ├── academic.port.ts            # abstract class: getCourse(id): Promise<Course>
+    │   ├── academic.local.adapter.ts   # en proceso → domains/academic/public
+    │   ├── academic.http.adapter.ts    # HTTP → ms-academic
+    │   ├── mappers/
+    │   │   └── academic.mapper.ts      # tipos de academic/public o JSON → tipo propio
+    │   └── models/
+    │       └── course.ts               # tipo propio de enrollment
+    └── email/                          # sistema siempre externo: client concreto (§8)
+        └── email.client.ts
+```
+
+```mermaid
+flowchart LR
+    subgraph EN["dominio enrollment"]
+        SVC["«component»<br/>modules/enrollment<br/>service"]
+        PORT["«component»<br/>AcademicPort"]
+        LOC["«component»<br/>AcademicLocalAdapter"]
+        HTTP["«component»<br/>AcademicHttpAdapter"]
+    end
+    subgraph AC["dominio academic"]
+        PUB["«component»<br/>public/<br/>AcademicFacade"]
+        MOD["«component»<br/>modules/…"]
+    end
+    EXT["«component»<br/>ms-academic<br/>(extraído)"]
+
+    SVC --> PORT
+    PORT -. "en el monolito" .-> LOC
+    LOC --> PUB --> MOD
+    PORT -. "extraído" .-> HTTP
+    HTTP -- "HTTP" --> EXT
+    SVC -. "✗" .-> PUB
+    SVC -. "✗" .-> MOD
+
+    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
+    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
+    classDef port fill:transparent,stroke:#6d45d1,stroke-width:2px
+    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
+    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
+    class EN,AC pkg
+    class SVC service
+    class PORT port
+    class LOC,HTTP,PUB,MOD feature
+    class EXT ext
+    linkStyle 6,7 stroke:#dc2626,stroke-width:3px,color:#dc2626
+```
+
+```ts
+// domains/enrollment/orchestrator/modules/academic/academic.port.ts
+export abstract class AcademicPort {
+  abstract getCourse(id: string): Promise<Course>;
+}
+
+// domains/enrollment/orchestrator/modules/academic/academic-orc.module.ts
+@Module({
+  imports: [AcademicPublicModule],
+  providers: [{ provide: AcademicPort, useClass: AcademicLocalAdapter }],
+  exports: [AcademicPort],
+})
+export class AcademicOrcModule {}
+
+// domains/enrollment/modules/enrollment/enrollment.service.ts
+constructor(private readonly academic: AcademicPort) {}
+```
+
+- El port es una `abstract class`, porque Nest la usa como token de inyección.
+- Los dos adapters entregan los mismos tipos propios y las mismas excepciones. El local deja pasar
+  las excepciones de `common` que lanza el otro dominio: son las mismas que el adapter HTTP produce
+  con la tabla de la §8.4.
+- Cambiar de adapter solo toca `useClass` en `academic-orc.module.ts`. Los módulos no cambian.
+- Hacia un sistema que siempre es externo (correo, pagos), el client sigue siendo concreto, como en
+  el microservicio: un port sin una segunda implementación es ceremonia.
+
+### 12.4. Reglas
+
+**Fronteras**
+
+1. Un dominio usa otro solo a través de su `orchestrator/`, y de ese otro solo importa `public/`.
+   Los `modules/` nunca importan otro dominio.
+2. `public/` es una fachada sin lógica y expone tipos propios del dominio, nunca entidades ni DTOs
+   HTTP.
+3. Entre dominios no hay ciclos síncronos. Si dos dominios se necesitan, una de las direcciones
+   pasa a eventos.
+4. Las reglas se verifican con un test de arquitectura sobre los imports. Nest no tiene visibilidad
+   por carpeta.
+
+**Datos**
+
+5. Cada dominio tiene su propio schema (o prefijo de tabla, si el motor no tiene schemas) y sus
+   propias migraciones.
+6. Entre dominios no hay FKs, relaciones del ORM ni joins. De otro dominio solo se guarda el id.
+7. No hay transacciones entre dominios, aunque compartan la conexión. Cada dominio confirma lo suyo;
+   lo demás se resuelve con eventos o compensación, igual que entre servicios (§8.4).
+
+**Contrato y eventos**
+
+8. Las rutas de cada dominio cuelgan de `/api/<dominio>/v1`. En Nest el versionado va en el path
+   del dominio (`RouterModule` con `path: '<dominio>/v1'` y sus módulos como `children`), no con
+   `enableVersioning`. Al extraer el dominio, el gateway envía ese prefijo al nuevo servicio y el
+   cliente no cambia.
+9. Los eventos usan los nombres y el contenido de la §11 sobre un bus en memoria
+   (`@nestjs/event-emitter`). Los consumidores son idempotentes desde el principio, porque al
+   extraer el dominio el bus pasa a ser un broker.
+
+### 12.5. Extraer un dominio
+
+```mermaid
+flowchart LR
+    A["1 · mover domains/&lt;d&gt;/<br/>a ms-&lt;d&gt;"] --> B["2 · mover su schema<br/>a una BD propia"]
+    B --> C["3 · en los demás dominios<br/>local → http adapter"]
+    C --> D["4 · el bus de sus eventos<br/>pasa al broker"]
+    D --> E["5 · el gateway envía<br/>/api/&lt;d&gt;/… al ms"]
+```
+
+El resultado es exactamente un microservicio de esta guía: los `modules/` del dominio pasan a ser
+los del ms, su `orchestrator/` sigue siendo su salida y su `public/` desaparece, porque su papel lo
+cumple la API HTTP.
+
+Si un paso exige tocar los módulos de otro dominio, una regla de la §12.4 se rompió antes.
