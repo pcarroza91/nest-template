@@ -1,11 +1,12 @@
-# Lineamientos de arquitectura de microservicios (backend)
+# Lineamientos de arquitectura de microservicio modular (backend)
 
 Arquitectura de referencia para un **microservicio modular** (`ms-<dominio>`): un servicio HTTP que
 contiene un solo dominio, organizado por módulos. No nombra módulos concretos:
 `docs/architecture.md` muestra cómo se aplica en este template.
 
 Un `ms-` nace de extraer un dominio de un monolito modular (`mm-<nombre>`): la
-[§12](#12-monolito-modular) describe cómo se organiza uno para que esa extracción sea mover una carpeta.
+la [guía del monolito modular](modular-monolith.md) describe cómo se organiza uno para que esa
+extracción sea mover una carpeta.
 
 | Término     | Qué es                                                                                                | Ejemplo                 |
 | ----------- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -34,9 +35,9 @@ Un `ms-` nace de extraer un dominio de un monolito modular (`mm-<nombre>`): la
    errores) está apagado salvo que el entorno lo admita expresamente.
 8. **Extender copiando el módulo de ejemplo.** Un módulo nuevo nace de la plantilla; no se crean
    capas ni carpetas que el módulo no necesita todavía.
-9. **Solo el orchestrator sale del servicio.** Toda llamada a otro servicio pasa por
-   `orchestrator/`; ningún módulo abre una conexión HTTP por su cuenta
-   ([§8](#8-comunicación-con-otros-servicios)).
+9. **Solo `integrations/` sale del servicio.** Toda llamada a otro servicio pasa por
+   `integrations/`; ningún módulo abre una conexión HTTP por su cuenta
+   ([§8](#8-integraciones-y-orquestación)).
 
 ## 2. Contexto
 
@@ -56,7 +57,7 @@ flowchart LR
     C -- "HTTPS + token" --> GW
     GW -- "/api/v1/…" --> MS
     UP -- "/api/v1/… · mTLS" --> MS
-    MS -- "orchestrator · HTTP" --> DOWN
+    MS -- "integrations · HTTP" --> DOWN
     DOWN -. "eventos, nunca HTTP de vuelta" .-> MS
     MS -- "lee y escribe" --> DB
 
@@ -79,9 +80,9 @@ flowchart LR
   pública y la interna y enruta hacia la API (`/api/v1/…`) de cada microservicio.
 - Las probes de salud (`/health`) quedan fuera del prefijo y de la versión de la API.
 - Lo que entra de otros servicios usa la misma API de los módulos; lo que sale hacia ellos pasa por
-  el orchestrator ([§8](#8-comunicación-con-otros-servicios)).
+  `integrations/` ([§8](#8-integraciones-y-orquestación)).
 - Un mismo servicio no puede estar a ambos lados con llamadas síncronas: si este microservicio lo
-  consume, la dirección de vuelta va por eventos ([§8.4](#84-reglas), regla 12;
+  consume, la dirección de vuelta va por eventos ([§8.4](#84-reglas), regla 13;
   [§11](#11-eventos)).
 
 ## 3. Capas
@@ -91,12 +92,16 @@ flowchart TB
     BOOT["<b>bootstrap</b><br/>main · app.module<br/>pipes · interceptor · filtro · seguridad"]
     MOD["<b>modules</b><br/>una carpeta por capacidad de dominio<br/>A usa el contrato público de B, sin ciclos"]
     HEALTH["<b>health</b><br/>probes"]
-    ORC["<b>orchestrator</b><br/>un módulo por dominio externo<br/>única salida hacia otros servicios"]
+    ORCH["<b>orchestrator</b> (opcional)<br/>procesos de varios pasos<br/>coordina módulos e integraciones"]
+    ORC["<b>integrations</b><br/>un módulo por dominio externo<br/>única salida hacia otros servicios"]
     COMMON["<b>common</b><br/>contrato de respuesta · excepciones<br/>paginación · guards · decoradores"]
     CONFIG["<b>config</b><br/>entorno validado · conexión a BD · logger"]
 
     BOOT == "registra" ==> MOD
     BOOT == "registra" ==> HEALTH
+    BOOT == "registra" ==> ORCH
+    ORCH == "coordina" ==> MOD
+    ORCH == "usa" ==> ORC
     BOOT == "configura con" ==> CONFIG
     BOOT == "aplica" ==> COMMON
     MOD == "usa" ==> COMMON
@@ -109,19 +114,20 @@ flowchart TB
     classDef core fill:transparent,stroke:#d14343,stroke-width:2px
     classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
     class BOOT app
-    class MOD,HEALTH,ORC feature
+    class MOD,HEALTH,ORC,ORCH feature
     class CONFIG core
     class COMMON shared
 ```
 
-| Capa           | Responsabilidad                                                                        | Puede depender de                                            | No depende de                                    |
-| -------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------ |
-| `bootstrap`    | Arrancar, aplicar lo transversal (seguridad, validación, sobre, errores) y registrar.  | `modules`, `health`, `common`, `config`                      | —                                                |
-| `modules`      | Implementar cada capacidad de dominio.                                                 | `common`, contrato público de otro módulo y del orchestrator | Piezas internas de otro módulo; `config` directo |
-| `orchestrator` | Llamar a otros servicios y entregar sus datos como tipos propios.                      | `common`, `ConfigService`                                    | `modules`                                        |
-| `health`       | Informar si el proceso y sus dependencias responden.                                   | `common`                                                     | `modules`                                        |
-| `common`       | Piezas transversales sin dominio: sobre de respuesta, excepciones, paginación, guards. | `config` (solo el enum de entornos)                          | `modules`, `orchestrator`                        |
-| `config`       | Leer y validar el entorno; construir conexión a BD y logger.                           | —                                                            | `modules`, `orchestrator`, `common`              |
+| Capa           | Responsabilidad                                                                                                                                                              | Puede depender de                                             | No depende de                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `bootstrap`    | Arrancar, aplicar lo transversal (seguridad, validación, sobre, errores) y registrar.                                                                                        | `modules`, `orchestrator`, `health`, `common`, `config`       | —                                                                |
+| `orchestrator` | Coordinar un proceso de varios pasos que no pertenece a un solo módulo (opcional).                                                                                           | contrato público de los módulos, `integrations`, `common`     | Piezas internas de los módulos; otro orchestrator                |
+| `modules`      | Implementar cada capacidad de dominio.                                                                                                                                       | `common`, contrato público de otro módulo y de `integrations` | `orchestrator`; piezas internas de otro módulo; `config` directo |
+| `integrations` | Consumir lo que está fuera del dominio y entregarlo como tipos propios: otros servicios. En un [monolito modular](modular-monolith.md#2-estructura), también otros dominios. | `common`, `ConfigService`                                     | `modules`, `orchestrator`                                        |
+| `health`       | Informar si el proceso y sus dependencias responden.                                                                                                                         | `common`                                                      | `modules`                                                        |
+| `common`       | Piezas transversales sin dominio: sobre de respuesta, excepciones, paginación, guards.                                                                                       | `config` (solo el enum de entornos)                           | `modules`, `orchestrator`, `integrations`                        |
+| `config`       | Leer y validar el entorno; construir conexión a BD y logger.                                                                                                                 | —                                                             | `modules`, `orchestrator`, `integrations`, `common`              |
 
 Un módulo no lee `process.env`: recibe la configuración por `ConfigService` o por parámetros. La
 única excepción hacia `config` desde `common` es el enum de entornos que usa el filtro de errores
@@ -151,7 +157,7 @@ Todo módulo los tiene desde que nace.
 
 - **`<x>.module.ts`**: declara los controllers, registra como providers el
   service y las piezas de las carpetas (repository, mapper, business) e importa
-  `TypeOrmModule.forFeature([<X>])` si el módulo tiene entidad y los módulos del orchestrator que
+  `TypeOrmModule.forFeature([<X>])` si el módulo tiene entidad y los módulos de `integrations/` que
   usa. **Exporta solo el service** ([§6](#6-reglas-de-dependencia-y-privacidad)).
 - **`<x>.controller.ts`**: declara las rutas, valida la entrada con DTOs y pipes, documenta el
   endpoint y delega en el service. Devuelve el dato plano: no arma el sobre de respuesta ni captura
@@ -159,7 +165,7 @@ Todo módulo los tiene desde que nace.
   distintos (por ejemplo `/<x>` y `/<padre>/:id/<x>`, en `<padre>-<x>.controller.ts`); todos
   delegan en el mismo service.
 - **`<x>.service.ts`**: coordina repository, business, mapper, services de otros módulos y clients
-  del orchestrator; no decide, no consulta y no calcula. Es la única pieza que otros módulos pueden usar.
+  de `integrations/`; no decide, no consulta y no calcula. Es la única pieza que otros módulos pueden usar.
 - **`<x>.service.spec.ts`**: nace cuando el service deja de devolver stubs.
 
 ### 4.2. `models/`: DTOs, enums, interfaces, tipos y constantes
@@ -253,7 +259,7 @@ modules/<x>/business/
 - Interfaz fluida: `init(entidad)` abre la cadena y resetea el estado, cada regla devuelve `this` y
   un método terminal entrega el resultado.
 - **Todos sus métodos son síncronos.** El service trae lo que las reglas necesitan antes de
-  `init()`: de la BD por el repository y de otros servicios por el orchestrator.
+  `init()`: de la BD por el repository y de otros servicios por `integrations/`.
 - Cuando una regla no se cumple, lanza una excepción de dominio (`BusinessRuleViolationException`).
 - Los parámetros de negocio (umbrales, tasas) son constantes del propio business.
 - El spec es obligatorio.
@@ -318,7 +324,7 @@ El módulo `resource` del template tiene todo salvo `libs/` y `events/`.
 | Persistencia | Hay datos propios que leer o escribir, sin reglas.           | + `entities/` · `repositories/` · `mappers/`  | El module importa `TypeOrmModule.forFeature` y registra repository y mapper. Se acaban los stubs.   |
 | Reglas       | Hay un `if` de negocio, un cálculo o una máquina de estados. | + `business/`                                 | El module registra el business. El service encadena `init(…).regla()` en vez de decidir.            |
 | —            | Hace falta un cálculo puro genérico, sin regla de negocio.   | + `libs/` (en cualquier etapa)                | Nada en el module: los libs no se registran.                                                        |
-| —            | Hace falta un dato o una acción de otro servicio.            | Ninguna (en cualquier etapa)                  | El module importa el módulo del orchestrator; el service llama al client antes de `init()` (§8).    |
+| —            | Hace falta un dato o una acción de otro servicio.            | Ninguna (en cualquier etapa)                  | El module importa el módulo de `integrations/`; el service llama al client antes de `init()` (§8).  |
 | —            | Solo se combinan datos de otros módulos.                     | Archivos principales + `models/`, sin entidad | El module importa los módulos dueños; el service usa sus services exportados.                       |
 
 ## 5. Roles de los elementos
@@ -410,7 +416,7 @@ flowchart LR
 - Un controller solo inyecta el service de su módulo.
 - Ninguna pieza fuera del repository inyecta `Repository<T>`, `DataSource` ni `EntityManager`.
 - Ninguna pieza de `modules/` importa `HttpModule`, `HttpService` ni un cliente HTTP: usa el client
-  del orchestrator y sus tipos públicos, nunca su mapper ni sus formas crudas
+  de `integrations/` y sus tipos públicos, nunca su mapper ni sus formas crudas
   ([§8.4](#84-reglas)).
 - Nadie fuera de `common/filters` lanza ni traduce `HttpException` por reglas de negocio: se lanzan
   excepciones de dominio.
@@ -580,7 +586,7 @@ sequenceDiagram
         participant R as Repository
         participant B as Business
     end
-    box rgba(37,99,235,0.15) orchestrator
+    box rgba(37,99,235,0.15) integrations
         participant O as Client
     end
     box rgba(47,146,84,0.15) common
@@ -671,86 +677,75 @@ sequenceDiagram
     FE-->>U: muestra la página
 ```
 
-## 8. Comunicación con otros servicios
+## 8. Integraciones y orquestación
 
-Cuando un módulo necesita un dato o una acción de otro servicio, no lo llama por su cuenta: lo pide
-al **orchestrator**. El orchestrator es la única puerta de salida del microservicio. Vive en
-`src/orchestrator/`, en paralelo a `modules/`, y queda **debajo** de los módulos: es a los otros
-servicios lo que el repository es a la base de datos.
+Dos piezas opcionales viven en paralelo a `modules/`, y cada una tiene una sola responsabilidad:
 
-Por dentro se organiza en módulos, **uno por dominio externo** (`academic`, `billing`), con la misma
-lógica que `modules/`: cada carpeta es dueña de lo suyo y crece sin mezclarse con las demás.
+| Carpeta         | Responsabilidad                                                         | Posición                                                 | Nace cuando                                                   |
+| --------------- | ----------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| `integrations/` | Llamar a otros servicios y entregar sus datos como tipos propios.       | **Debajo** de los módulos: ellos la usan.                | Aparece la primera llamada a otro servicio.                   |
+| `orchestrator/` | Coordinar un proceso de varios pasos que no pertenece a un solo módulo. | **Encima** de los módulos: los usa, ellos no la conocen. | Un proceso escribe en varios módulos o necesita compensación. |
 
 ```mermaid
-flowchart LR
-    subgraph MS["«package» modules"]
-        SVC["«component»<br/>enrollment.service"]
-    end
-    subgraph ORC["«package» orchestrator"]
-        AC["«component»<br/>modules/academic<br/>academic.client"]
-        BI["«component»<br/>modules/billing<br/>billing.client"]
-        CO["«component»<br/>common<br/>http · errores"]
-    end
-    X1["«component»<br/>ms-academic"]
-    X2["«component»<br/>ms-billing"]
+flowchart TB
+    ORCH["«package» orchestrator/<br/>procesos (opcional)"]
+    MOD["«package» modules/"]
+    INT["«package» integrations/<br/>salida (opcional)"]
+    EXT["«component»<br/>otros servicios"]
 
-    SVC -- "tipos propios" --> AC
-    SVC -- "tipos propios" --> BI
-    AC --> CO
-    BI --> CO
-    CO -- "HTTP" --> X1
-    CO -- "HTTP" --> X2
-    AC -. "✗" .-> BI
-    AC -. "✗" .-> SVC
+    ORCH -- "service · contrato público" --> MOD
+    ORCH -- "client" --> INT
+    MOD -- "client" --> INT
+    INT -- "HTTP" --> EXT
+    MOD -. "✗" .-> ORCH
+    INT -. "✗" .-> MOD
 
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
+    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
     classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class MS,ORC pkgFeature
-    class SVC service
-    class AC,BI feature
-    class CO shared
-    class X1,X2 ext
-    linkStyle 6,7 stroke:#dc2626,stroke-width:3px,color:#dc2626
+    class ORCH,MOD,INT pkg
+    class EXT ext
+    linkStyle 4,5 stroke:#dc2626,stroke-width:3px,color:#dc2626
 ```
 
-### 8.1. Estructura
+Las §8.1 a §8.5 describen `integrations/`; la §8.6, `orchestrator/`.
+
+### 8.1. Integraciones: estructura
+
+Cuando un módulo necesita un dato o una acción de otro servicio, no lo llama por su cuenta: lo pide
+a `integrations/`, la única puerta de salida del microservicio. Es a los otros servicios lo que el
+repository es a la base de datos. Por dentro se organiza en módulos, **uno por dominio externo**
+(`academic`, `billing`): cada carpeta es dueña de lo suyo y crece sin mezclarse con las demás.
 
 ```
-src/orchestrator/
-├── common/                             # base HTTP compartida; solo la usa el orchestrator
-│   ├── http-client.factory.ts          # baseUrl · timeout · x-request-id · identidad
-│   └── external-error.mapper.ts        # respuesta externa → excepción de dominio
-└── modules/
-    ├── academic/                       # un módulo por dominio externo
-    │   ├── academic-orc.module.ts      # registra y exporta solo el client
-    │   ├── academic.client.ts          # métodos por capacidad: getCourse, courseExists
-    │   ├── academic.client.spec.ts
-    │   ├── mappers/
-    │   │   └── academic.mapper.ts      # forma externa → tipo propio
-    │   └── models/
-    │       ├── course.ts               # público: lo que recibe el módulo
-    │       └── responses/              # privado: la forma cruda del otro servicio
-    │           └── course.response.ts
-    └── billing/
-        └── …
+src/integrations/
+├── common/                                 # base HTTP compartida; solo la usa integrations
+│   ├── http-client.factory.ts              # baseUrl · timeout · x-request-id · identidad
+│   └── external-error.mapper.ts            # respuesta externa → excepción de dominio
+├── academic/                               # un módulo por dominio externo
+│   ├── academic-integration.module.ts      # registra y exporta solo el client
+│   ├── academic.client.ts                  # métodos por capacidad: getCourse, getCourses
+│   ├── academic.client.spec.ts
+│   ├── mappers/
+│   │   └── academic.mapper.ts              # forma externa → tipo propio
+│   └── models/
+│       ├── course.ts                       # público: lo que recibe el módulo
+│       └── responses/                      # privado: la forma cruda del otro servicio
+│           └── course.response.ts
+└── billing/
+    └── …
 ```
 
-| Pieza                         | Responsabilidad                                                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `<dominio>-orc.module.ts`     | Importa `HttpModule` con la URL base y el timeout del dominio leídos de `ConfigService`. Registra y **exporta solo el client**.          |
-| `<dominio>.client.ts`         | Métodos por **capacidad** que necesita este microservicio (`getCourse`), no un espejo de los endpoints del otro. Devuelve tipos propios. |
-| `mappers/<dominio>.mapper.ts` | Traduce la forma externa al tipo propio. Es el único lugar que conoce cómo responde el otro servicio.                                    |
-| `models/`                     | Los tipos propios (públicos) y, en `responses/`, las formas crudas del otro servicio (privadas).                                         |
-| `common/`                     | Lo que se repite en toda llamada: cabeceras, timeout y traducción de errores. Cada client solo declara sus llamadas.                     |
+| Pieza                             | Responsabilidad                                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `<dominio>-integration.module.ts` | Importa `HttpModule` con la URL base y el timeout del dominio leídos de `ConfigService`. Registra y **exporta solo el client**.          |
+| `<dominio>.client.ts`             | Métodos por **capacidad** que necesita este microservicio (`getCourse`), no un espejo de los endpoints del otro. Devuelve tipos propios. |
+| `mappers/<dominio>.mapper.ts`     | Traduce la forma externa al tipo propio. Es el único lugar que conoce cómo responde el otro servicio.                                    |
+| `models/`                         | Los tipos propios (públicos) y, en `responses/`, las formas crudas del otro servicio (privadas).                                         |
+| `common/`                         | Lo que se repite en toda llamada: cabeceras, timeout y traducción de errores. Cada client solo declara sus llamadas.                     |
 
-El orchestrator no tiene controllers, entidades, base de datos ni reglas de negocio. En un
-monolito modular, hacia otro dominio del mismo proceso, el client se divide en port y adapters
-([§12.3](#123-orchestrator-con-port-y-adapters)).
+Una integración no tiene controllers, entidades, base de datos ni reglas de negocio.
 
-### 8.2. Uso desde un módulo
+### 8.2. Integraciones: uso desde un módulo
 
 ```mermaid
 sequenceDiagram
@@ -760,7 +755,7 @@ sequenceDiagram
         participant B as Business
         participant R as Repository
     end
-    box rgba(37,99,235,0.15) orchestrator
+    box rgba(37,99,235,0.15) integrations
         participant O as academic.client
     end
     box rgba(160,124,59,0.15) externo
@@ -785,7 +780,7 @@ sequenceDiagram
 
 ```ts
 // modules/enrollment/enrollment.module.ts
-@Module({ imports: [AcademicOrcModule, TypeOrmModule.forFeature([Enrollment])], … })
+@Module({ imports: [AcademicIntegrationModule, TypeOrmModule.forFeature([Enrollment])], … })
 
 // modules/enrollment/enrollment.service.ts
 const course = await this.academic.getCourse(dto.courseId);
@@ -794,43 +789,47 @@ const enrollment = this.business.init(dto, course).validarCupo().getEntity();
 
 El service trae los datos externos **antes** de `init()`: el business sigue síncrono y sin E/S.
 
-### 8.3. Cómo crece
+### 8.3. Integraciones: cómo crecen
 
 | Situación                                      | Qué se hace                                                                                 |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Primera llamada a otro servicio.               | Nace `orchestrator/` con `common/` y el módulo de ese dominio.                              |
-| Primera llamada a un dominio externo nuevo.    | Nace `orchestrator/modules/<dominio>/`.                                                     |
+| Primera llamada a otro servicio.               | Nace `integrations/` con `common/` y el módulo de ese dominio.                              |
+| Primera llamada a un dominio externo nuevo.    | Nace `integrations/<dominio>/`.                                                             |
 | Un dominio externo suma muchas capacidades.    | Su módulo se divide en un client por capacidad (`courses.client.ts`, `sections.client.ts`). |
 | El otro servicio se divide en dos despliegues. | El módulo del dominio apunta a dos URLs; los módulos que lo usan no cambian.                |
 
-Un microservicio que no habla con nadie no tiene `orchestrator/`.
+Un microservicio que no habla con nadie no tiene `integrations/`.
 
 ### 8.4. Reglas
 
 **Dependencias**
 
-1. Solo `orchestrator/` llama a otros servicios. Ningún módulo importa `HttpModule`, `HttpService`
+1. Solo `integrations/` llama a otros servicios. Ningún módulo importa `HttpModule`, `HttpService`
    ni un cliente HTTP.
-2. Los módulos usan el orchestrator; el orchestrator nunca importa `modules/`.
-3. Un módulo del orchestrator representa un **dominio externo**, no un host ni una URL.
-4. Los módulos del orchestrator no se importan entre sí. Si una operación necesita dos dominios
-   externos, los combina el service del módulo.
-5. El contrato público de un módulo del orchestrator es su client y los tipos de `models/` fuera de
-   `responses/`. El mapper y las formas crudas son privados.
+2. Los módulos y el orchestrator usan `integrations/`; `integrations/` nunca importa `modules/` ni
+   `orchestrator/`.
+3. Un módulo de `integrations/` representa un **dominio externo**, no un host ni una URL.
+4. Los módulos de `integrations/` no se importan entre sí (salvo `common/`). Si una operación
+   necesita dos dominios externos, los combina el service del módulo o el orchestrator.
+5. El contrato público de un módulo de `integrations/` es su client y los tipos de `models/` fuera
+   de `responses/`. El mapper y las formas crudas son privados.
 
 **Cada llamada**
 
 6. Tiene timeout. La URL y el timeout de cada dominio se declaran en el contrato de entorno
    (`<DOMINIO>_URL`, `<DOMINIO>_TIMEOUT_MS`) y se validan al arrancar.
 7. Propaga `x-request-id` y la identidad del usuario. `common/` los toma del contexto de la
-   petición (`AsyncLocalStorage`); el módulo no pasa cabeceras.
+   petición (`AsyncLocalStorage`); el módulo no pasa cabeceras. Fuera de una petición (un job, un
+   consumidor de eventos), se envía la identidad propia del servicio.
 8. Solo se reintentan las lecturas idempotentes, como máximo una vez. Una escritura nunca se
    reintenta.
+9. Si se necesitan varios recursos, se piden en una sola llamada (`getCourses(ids)`), nunca con una
+   llamada por elemento dentro de un ciclo.
 
 **Errores**
 
-9. La respuesta del otro servicio se traduce a una excepción de dominio en
-   `common/external-error.mapper.ts`:
+10. La respuesta del otro servicio se traduce a una excepción de dominio en
+    `common/external-error.mapper.ts`:
 
 | Respuesta externa              | Excepción                                                 | HTTP hacia el cliente          |
 | ------------------------------ | --------------------------------------------------------- | ------------------------------ |
@@ -841,24 +840,88 @@ Un microservicio que no habla con nadie no tiene `orchestrator/`.
 
 **Consistencia**
 
-10. No hay transacciones entre servicios. Una operación escribe en su propia base de datos; si otro
+11. No hay transacciones entre servicios. Una operación escribe en su propia base de datos; si otro
     servicio debe cambiar algo como consecuencia, se publica un evento ([§11](#11-eventos)).
-11. Si el negocio exige una escritura síncrona en otro servicio, se hace **después** de confirmar lo
+12. Si el negocio exige una escritura síncrona en otro servicio, se hace **después** de confirmar lo
     local. Si falla, lo local se deshace explícitamente o queda marcado como pendiente; nunca se
     ignora en silencio.
-12. Las llamadas síncronas entre servicios no forman ciclos. Si `ms-a` llama a `ms-b`, `ms-b` se
+13. Las llamadas síncronas entre servicios no forman ciclos. Si `ms-a` llama a `ms-b`, `ms-b` se
     entera de `ms-a` por eventos.
 
 **Lo que entra**
 
-13. Si otro servicio necesita algo de este, llama a la API normal de sus módulos. El orchestrator
+14. Si otro servicio necesita algo de este, llama a la API normal de sus módulos. `integrations/`
     solo maneja lo que sale.
 
-### 8.5. Pruebas
+### 8.5. Integraciones: pruebas
 
 - **Client:** se prueba contra HTTP simulado (`nock`): la ruta y las cabeceras que envía, el tipo
   propio que entrega y la excepción que lanza en cada caso de la tabla de errores.
 - **Service del módulo:** recibe el client simulado, igual que el repository.
+
+### 8.6. Orquestación de procesos
+
+La mayoría de los casos de uso no necesitan orquestador: el service del módulo coordina su
+repository, su business, sus integraciones y lee de otros módulos por su service
+([§6.1](#61-dependencias-entre-módulos)). Un orquestador aparece solo cuando un proceso **no
+pertenece a un solo módulo**.
+
+| Situación                                                                           | Dónde va                        |
+| ----------------------------------------------------------------------------------- | ------------------------------- |
+| Un módulo escribe lo suyo y lee datos de otros módulos o servicios.                 | El service del módulo.          |
+| Un módulo escribe lo suyo y otros deben enterarse.                                  | El service del módulo + evento. |
+| Un proceso escribe en **varios** módulos, en un orden, con pasos que pueden fallar. | `orchestrator/<proceso>/`.      |
+| Un proceso necesita compensar pasos ya hechos si uno posterior falla.               | `orchestrator/<proceso>/`.      |
+
+```
+src/orchestrator/
+└── enrollment-process/
+    ├── enrollment-process.module.ts         # importa los módulos e integraciones que coordina
+    ├── enrollment-process.controller.ts     # el endpoint del proceso
+    ├── enrollment-process.orchestrator.ts   # los pasos, en orden, y su compensación
+    ├── enrollment-process.orchestrator.spec.ts
+    └── models/                              # DTOs de entrada y salida del proceso
+```
+
+```mermaid
+sequenceDiagram
+    participant C as enrollment-process.controller
+    participant O as Orchestrator
+    participant ST as students.service
+    participant SE as sections.service
+    participant EN as enrollments.service
+    participant EV as Eventos
+
+    C->>O: enroll(dto)
+    O->>ST: assertEligible(studentId)
+    O->>SE: reserveSeat(sectionId)
+    O->>EN: create(studentId, sectionId)
+    alt create falla
+        O->>SE: releaseSeat(sectionId)
+        O--xC: excepción original
+    end
+    O->>EV: enrollment.enrollment.created
+    O-->>C: DTO
+```
+
+- **Coordina, no decide.** Cada paso es una llamada al service de un módulo, y las reglas viven en
+  el business de ese módulo. Si el orquestador tiene un `if` de negocio, la regla está fuera de
+  lugar.
+- **Tiene su propio controller.** Los módulos no lo importan: si un controller de módulo llamara al
+  orquestador, el orquestador dependería del módulo y el módulo del orquestador.
+- **Los endpoints de los módulos siguen siendo directos.** El orquestador solo agrega el endpoint del
+  proceso; no envuelve las operaciones simples.
+- **Transacción si se puede, compensación si no.** Si todos los pasos escriben en la base de datos
+  del propio servicio, el proceso corre en una sola transacción, con un contexto transaccional que
+  comparten los repositories (por ejemplo `typeorm-transactional`); el orquestador no toca
+  `DataSource`. Los pasos que no pueden entrar en esa transacción (una integración, otro dominio)
+  tienen su paso inverso en el dueño (`reserveSeat` → `releaseSeat`) y se compensan en orden
+  inverso. Si la compensación también falla, el proceso queda marcado como pendiente y se registra;
+  nunca se ignora en silencio.
+- **Un orquestador no llama a otro orquestador.** Si dos procesos comparten pasos, los pasos
+  comunes son operaciones de un módulo.
+- Uno por proceso, nombrado por el proceso (`enrollment-process`), no por el módulo.
+- Se prueba con los services simulados: el orden de los pasos y la compensación de cada fallo.
 
 ## 9. Arranque y entornos
 
@@ -896,10 +959,11 @@ flowchart TB
     O -- "de uno existente" --> K{"¿Qué hace?"}
     K -- "recibe HTTP" --> CT["controller"]
     K -- "coordina pasos" --> SV["service"]
+    K -- "proceso de varios módulos<br/>con escrituras o compensación" --> OC["orchestrator/&lt;proceso&gt;/"]
     K -- "lógica de negocio" --> BZ["business/"]
     K -- "cálculo puro genérico" --> LB["libs/"]
     K -- "consulta o guarda" --> RP["repositories/"]
-    K -- "llama a otro servicio" --> OR["orchestrator/modules/&lt;dominio&gt;/"]
+    K -- "llama a otro servicio" --> OR["integrations/&lt;dominio&gt;/"]
     K -- "entidad → salida" --> MP["mappers/"]
     K -- "DTO, enum, interfaz,<br/>tipo o constante" --> DT["models/"]
     K -- "forma en la BD" --> EN["entities/"]
@@ -909,7 +973,7 @@ flowchart TB
     classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
     class COM shared
     class CFG core
-    class NEW,CT,SV,BZ,LB,RP,MP,DT,EN,OR feature
+    class NEW,CT,SV,BZ,LB,RP,MP,DT,EN,OR,OC feature
 ```
 
 Un parámetro de negocio (umbral, tasa) vive como constante en el business; pasa a `config/` solo
@@ -939,230 +1003,3 @@ Se usa un evento en vez de una llamada cuando:
   duplicados.
 
 El sobre del evento, la publicación confiable (outbox) y el broker quedan pendientes de definir.
-
-## 12. Monolito modular
-
-Un **monolito modular** (`mm-<nombre>`) es un solo despliegue con varios dominios. Cada dominio se
-organiza como un microservicio de esta guía, y las §4 a §11 se aplican sin cambios dentro de él. La
-frontera entre dominios se trata como la frontera entre servicios. Un dominio se extrae a
-`ms-<dominio>` moviendo su carpeta.
-
-| Frontera    | Dureza                             | Qué la cruza                                                                                  |
-| ----------- | ---------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Módulo**  | Blanda: dentro del dominio.        | Su service y sus `models/dto` y `models/enums` ([§6](#6-reglas-de-dependencia-y-privacidad)). |
-| **Dominio** | Dura: como si fuera otro servicio. | Solo su `public/`, y solo desde el orchestrator de otro dominio.                              |
-
-```mermaid
-flowchart LR
-    GW["«component»<br/>API Gateway"]
-    subgraph MM["«component» mm-&lt;nombre&gt; · un proceso"]
-        subgraph D1["dominio enrollment"]
-            M1["modules/"]
-            O1["orchestrator/"]
-        end
-        subgraph D2["dominio academic"]
-            P2["public/"]
-            M2["modules/"]
-        end
-        BUS["bus de eventos<br/>en memoria"]
-    end
-    subgraph DB["«component» Base de datos"]
-        S1[("schema<br/>enrollment")]
-        S2[("schema<br/>academic")]
-    end
-    EXT["«component»<br/>servicio externo"]
-
-    GW -- "/api/enrollment/v1/…" --> M1
-    GW -- "/api/academic/v1/…" --> M2
-    M1 --> O1
-    O1 -- "en proceso" --> P2
-    P2 --> M2
-    O1 -- "HTTP" --> EXT
-    M1 --> S1
-    M2 --> S2
-    M2 -. "publica" .-> BUS
-    BUS -. "entrega" .-> M1
-
-    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef main fill:transparent,stroke:#e11d74,stroke-width:3px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef gw fill:transparent,stroke:#475569,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class D1,D2 pkg
-    class MM main
-    class M1,O1,P2,M2,BUS feature
-    class GW gw
-    class EXT,DB ext
-```
-
-### 12.1. Estructura
-
-```
-src/
-├── domains/
-│   ├── academic/
-│   │   ├── academic-domain.module.ts       # importa sus módulos, su public y su orchestrator
-│   │   ├── public/                         # lo único que otro dominio puede usar
-│   │   │   ├── academic-public.module.ts   # registra y exporta solo la fachada
-│   │   │   ├── academic.facade.ts          # operaciones que ofrece a otros dominios
-│   │   │   └── models/                     # tipos de esas operaciones
-│   │   ├── modules/                        # anatomía de la §4
-│   │   ├── orchestrator/                   # su salida: §8 y §12.3
-│   │   └── migrations/                     # solo tablas de su schema
-│   └── enrollment/
-│       └── …
-├── common/                                 # compartido por todos los dominios, sin dominio
-├── config/
-└── app.module.ts                           # importa los <d>-domain.module
-```
-
-- Un dominio no importa nada de otro dominio salvo desde su `orchestrator/`, y de ese otro solo
-  importa `public/`.
-- `common/` y `config/` son de todos y no tienen dominio, igual que en el microservicio.
-
-### 12.2. `public/`: contrato de un dominio hacia los demás
-
-- **`<d>.facade.ts`** reúne las operaciones que el dominio ofrece a otros dominios
-  (`getCourse`, `reserveSeat`). Es una fachada: delega en los services de sus módulos y no tiene
-  lógica propia.
-- **`models/`** contiene los tipos de esas operaciones. Nunca entidades ni DTOs HTTP: lo que cruza
-  entre dominios no se ata a la forma de una ruta ni de una tabla.
-- **`<d>-public.module.ts`** importa los módulos que la fachada usa y exporta solo la fachada.
-- Nace con la primera operación que otro dominio necesita. Cuando el dominio se extrae, cada
-  operación de la fachada tiene su equivalente en la API HTTP de sus módulos.
-
-### 12.3. Orchestrator con port y adapters
-
-Hacia otro dominio del mismo monolito, el client del orchestrator ([§8](#8-comunicación-con-otros-servicios))
-se divide en un **port** y sus **adapters**:
-
-- **Port:** el contrato de lo que el dominio necesita del otro, con tipos propios. Es lo único que
-  ven los módulos.
-- **Adapter local:** cumple el port llamando en memoria a `public/` del otro dominio.
-- **Adapter HTTP:** cumple el port por HTTP, con todas las reglas de la §8.4. Se usa cuando el otro
-  dominio ya fue extraído.
-
-```
-domains/enrollment/orchestrator/
-├── common/                             # base HTTP de la §8 (para los adapters HTTP)
-└── modules/
-    ├── academic/                       # otro dominio del monolito
-    │   ├── academic-orc.module.ts      # elige el adapter · exporta solo el port
-    │   ├── academic.port.ts            # abstract class: getCourse(id): Promise<Course>
-    │   ├── academic.local.adapter.ts   # en proceso → domains/academic/public
-    │   ├── academic.http.adapter.ts    # HTTP → ms-academic
-    │   ├── mappers/
-    │   │   └── academic.mapper.ts      # tipos de academic/public o JSON → tipo propio
-    │   └── models/
-    │       └── course.ts               # tipo propio de enrollment
-    └── email/                          # sistema siempre externo: client concreto (§8)
-        └── email.client.ts
-```
-
-```mermaid
-flowchart LR
-    subgraph EN["dominio enrollment"]
-        SVC["«component»<br/>modules/enrollment<br/>service"]
-        PORT["«component»<br/>AcademicPort"]
-        LOC["«component»<br/>AcademicLocalAdapter"]
-        HTTP["«component»<br/>AcademicHttpAdapter"]
-    end
-    subgraph AC["dominio academic"]
-        PUB["«component»<br/>public/<br/>AcademicFacade"]
-        MOD["«component»<br/>modules/…"]
-    end
-    EXT["«component»<br/>ms-academic<br/>(extraído)"]
-
-    SVC --> PORT
-    PORT -. "en el monolito" .-> LOC
-    LOC --> PUB --> MOD
-    PORT -. "extraído" .-> HTTP
-    HTTP -- "HTTP" --> EXT
-    SVC -. "✗" .-> PUB
-    SVC -. "✗" .-> MOD
-
-    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef port fill:transparent,stroke:#6d45d1,stroke-width:2px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class EN,AC pkg
-    class SVC service
-    class PORT port
-    class LOC,HTTP,PUB,MOD feature
-    class EXT ext
-    linkStyle 6,7 stroke:#dc2626,stroke-width:3px,color:#dc2626
-```
-
-```ts
-// domains/enrollment/orchestrator/modules/academic/academic.port.ts
-export abstract class AcademicPort {
-  abstract getCourse(id: string): Promise<Course>;
-}
-
-// domains/enrollment/orchestrator/modules/academic/academic-orc.module.ts
-@Module({
-  imports: [AcademicPublicModule],
-  providers: [{ provide: AcademicPort, useClass: AcademicLocalAdapter }],
-  exports: [AcademicPort],
-})
-export class AcademicOrcModule {}
-
-// domains/enrollment/modules/enrollment/enrollment.service.ts
-constructor(private readonly academic: AcademicPort) {}
-```
-
-- El port es una `abstract class`, porque Nest la usa como token de inyección.
-- Los dos adapters entregan los mismos tipos propios y las mismas excepciones. El local deja pasar
-  las excepciones de `common` que lanza el otro dominio: son las mismas que el adapter HTTP produce
-  con la tabla de la §8.4.
-- Cambiar de adapter solo toca `useClass` en `academic-orc.module.ts`. Los módulos no cambian.
-- Hacia un sistema que siempre es externo (correo, pagos), el client sigue siendo concreto, como en
-  el microservicio: un port sin una segunda implementación es ceremonia.
-
-### 12.4. Reglas
-
-**Fronteras**
-
-1. Un dominio usa otro solo a través de su `orchestrator/`, y de ese otro solo importa `public/`.
-   Los `modules/` nunca importan otro dominio.
-2. `public/` es una fachada sin lógica y expone tipos propios del dominio, nunca entidades ni DTOs
-   HTTP.
-3. Entre dominios no hay ciclos síncronos. Si dos dominios se necesitan, una de las direcciones
-   pasa a eventos.
-4. Las reglas se verifican con un test de arquitectura sobre los imports. Nest no tiene visibilidad
-   por carpeta.
-
-**Datos**
-
-5. Cada dominio tiene su propio schema (o prefijo de tabla, si el motor no tiene schemas) y sus
-   propias migraciones.
-6. Entre dominios no hay FKs, relaciones del ORM ni joins. De otro dominio solo se guarda el id.
-7. No hay transacciones entre dominios, aunque compartan la conexión. Cada dominio confirma lo suyo;
-   lo demás se resuelve con eventos o compensación, igual que entre servicios (§8.4).
-
-**Contrato y eventos**
-
-8. Las rutas de cada dominio cuelgan de `/api/<dominio>/v1`. En Nest el versionado va en el path
-   del dominio (`RouterModule` con `path: '<dominio>/v1'` y sus módulos como `children`), no con
-   `enableVersioning`. Al extraer el dominio, el gateway envía ese prefijo al nuevo servicio y el
-   cliente no cambia.
-9. Los eventos usan los nombres y el contenido de la §11 sobre un bus en memoria
-   (`@nestjs/event-emitter`). Los consumidores son idempotentes desde el principio, porque al
-   extraer el dominio el bus pasa a ser un broker.
-
-### 12.5. Extraer un dominio
-
-```mermaid
-flowchart LR
-    A["1 · mover domains/&lt;d&gt;/<br/>a ms-&lt;d&gt;"] --> B["2 · mover su schema<br/>a una BD propia"]
-    B --> C["3 · en los demás dominios<br/>local → http adapter"]
-    C --> D["4 · el bus de sus eventos<br/>pasa al broker"]
-    D --> E["5 · el gateway envía<br/>/api/&lt;d&gt;/… al ms"]
-```
-
-El resultado es exactamente un microservicio de esta guía: los `modules/` del dominio pasan a ser
-los del ms, su `orchestrator/` sigue siendo su salida y su `public/` desaparece, porque su papel lo
-cumple la API HTTP.
-
-Si un paso exige tocar los módulos de otro dominio, una regla de la §12.4 se rompió antes.

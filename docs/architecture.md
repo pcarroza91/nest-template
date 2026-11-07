@@ -1,6 +1,6 @@
 # Arquitectura de ms-template (backend)
 
-Cómo se concretan en este template los [lineamientos de arquitectura](architecture/guidelines.md).
+Cómo se concretan en este template los [lineamientos de arquitectura](architecture/modular-microservice.md).
 Cada sección indica el lineamiento que aplica; la notación de los diagramas es la misma. El
 [README](../README.md) es la guía de uso; este documento explica la estructura y sus reglas.
 
@@ -11,7 +11,7 @@ Cada sección indica el lineamiento que aplica; la notación de los diagramas es
 NestJS 11 sobre Express, TypeORM 0.3, TypeScript 5 (`strictNullChecks`, `noImplicitAny`),
 `class-validator`/`class-transformer`, pino (`nestjs-pino`), `@nestjs/terminus`, `@nestjs/swagger`
 para generar OpenAPI y Scalar para renderizarlo. Node ≥ 22, pnpm 11. Aplica las capas de la
-[§3](architecture/guidelines.md#3-capas).
+[§3](architecture/modular-microservice.md#3-capas).
 
 ```mermaid
 flowchart TB
@@ -140,7 +140,7 @@ flowchart LR
 
 ## 11. Módulo de ejemplo: `resource`
 
-Es un módulo en la etapa de reglas ([§4.9](architecture/guidelines.md#49-cómo-crece-un-módulo)) y
+Es un módulo en la etapa de reglas ([§4.9](architecture/modular-microservice.md#49-cómo-crece-un-módulo)) y
 la plantilla que se copia para crear uno nuevo.
 
 Archivos del módulo:
@@ -314,7 +314,7 @@ El registro queda en la tabla con `deletedAt`; TypeORM lo excluye de las lectura
 ## 13. Formas de un módulo: Identity Service
 
 Los nueve módulos restantes implementan el contrato de `identity_service_openapi.yaml` en la etapa
-de contrato ([§4.9](architecture/guidelines.md#49-cómo-crece-un-módulo)): controllers, DTOs y
+de contrato ([§4.9](architecture/modular-microservice.md#49-cómo-crece-un-módulo)): controllers, DTOs y
 services que devuelven stubs tipados con `TODO(RFn)`. Las carpetas `business/`, `entities/`,
 `mappers/` y `repositories/` existen con `.gitkeep`.
 
@@ -331,7 +331,7 @@ services que devuelven stubs tipados con `TODO(RFn)`. Las carpetas `business/`, 
 | `internal`             | `/internal/authorize`                              | ninguno (§13.1)                             |
 
 Dependencias actuales entre módulos (solo tipos de `dto/`, sin dependencia en tiempo de ejecución,
-[§6.1](architecture/guidelines.md#61-dependencias-entre-módulos)):
+[§6.1](architecture/modular-microservice.md#61-dependencias-entre-módulos)):
 
 ```mermaid
 flowchart LR
@@ -378,7 +378,7 @@ una clase `Error` que tapa al `Error` nativo: se importa siempre con alias
 
 ## 14. Configuración y entornos (`src/config`)
 
-Aplica la [§9](architecture/guidelines.md#9-arranque-y-entornos).
+Aplica la [§9](architecture/modular-microservice.md#9-arranque-y-entornos).
 
 - `env.validation.ts` declara `EnvironmentVariables` y `validateEnv`. Toda variable nueva se agrega
   ahí con tipo explícito (`PORT: number = 3000`) y `@Type(() => Number)` si es numérica; sin
@@ -463,7 +463,7 @@ flowchart TB
 
 ## 15. Contrato de respuesta y errores (`src/common`)
 
-Aplica el principio 5 y la [§7.3](architecture/guidelines.md#73-errores).
+Aplica el principio 5 y la [§7.3](architecture/modular-microservice.md#73-errores).
 
 `ResponseInterceptor` envuelve todo retorno en `ApiResponse<T>`; si el retorno es un
 `PaginatedResultDto`, pone `items` en `data` y la metadata en `meta.pagination`.
@@ -837,7 +837,7 @@ flowchart LR
 | `pnpm test:e2e`                  | E2E contra sqlite en memoria: sobre, errores, paginación, portabilidad. |
 | `pnpm install --frozen-lockfile` | Lockfile sincronizado con `package.json`.                               |
 
-Las reglas de capas y privacidad de la [§6](architecture/guidelines.md#6-reglas-de-dependencia-y-privacidad)
+Las reglas de capas y privacidad de la [§6](architecture/modular-microservice.md#6-reglas-de-dependencia-y-privacidad)
 **hoy se verifican en revisión**, no con el linter. Para automatizarlas haría falta una regla de
 imports (por ejemplo `no-restricted-imports` o un plugin de límites) que prohíba importar
 `repositories/`, `business/`, `mappers/` y `entities/` de otro módulo, y la detección de ciclos.

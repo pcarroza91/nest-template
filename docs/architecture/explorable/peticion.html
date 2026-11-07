@@ -628,7 +628,7 @@ body:not([data-mode="story"]) .ghost.reset { display: none; }
       <div class="step-inner">
         <p class="eyebrow">Lineamientos de arquitectura backend</p>
         <h1 class="title">Anatomía de una petición</h1>
-        <p class="lead">El módulo <code>resource</code> de ms-template, recorrido como dicta <code>docs/architecture/guidelines.md</code>.</p>
+        <p class="lead">El módulo <code>resource</code> de ms-template, recorrido como dicta <code>docs/architecture/modular-microservice.md</code>.</p>
         <p>A la derecha hay una API simulada que responde como la real. Cada petición se dibuja como diagrama de secuencia, capa por capa, y abajo aparece la respuesta con su sobre. El árbol muestra en qué carpeta vive cada pieza; el inspector, lo que hay en la tabla <code>resources</code>.</p>
         <p>Al avanzar, cada paso ilumina la pieza de la que habla. Puedes enviar peticiones en cualquier momento: elige una de la barra o escribe la tuya.</p>
         <p class="muted small">Cada tipo de pieza tiene un color fijo, el mismo de los diagramas:</p>
@@ -1132,7 +1132,7 @@ findOne(<span class="tok-k">@Param</span>(<span class="tok-s">'id'</span>, Parse
         <p class="eyebrow">Fin del recorrido</p>
         <h2>Toda la arquitectura, en una petición</h2>
         <p>Por módulo de dominio y, dentro, por rol. Dependencias en una sola dirección. Cada pieza hace una sola cosa. La entidad no sale del módulo. Un solo sobre de respuesta. Cada capa falla en su lugar y una sola pieza traduce. Seguro por defecto.</p>
-        <p>El detalle de cada regla está en <a href="../guidelines.md"><code>docs/architecture/guidelines.md</code></a>, y su aplicación en este template, en <a href="../../architecture.md"><code>docs/architecture.md</code></a>.</p>
+        <p>El detalle de cada regla está en <a href="../modular-microservice.md"><code>docs/architecture/modular-microservice.md</code></a>, y su aplicación en este template, en <a href="../../architecture.md"><code>docs/architecture.md</code></a>.</p>
         <div class="controls">
           <button class="chip-btn" data-act="go:intro">Volver al inicio</button>
           <button class="chip-btn" data-act="reset">Reiniciar la API</button>
