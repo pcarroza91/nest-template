@@ -62,18 +62,22 @@ flowchart LR
     M2 -. "publica" .-> BUS
     BUS -. "entrega" .-> M1
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef contract fill:#ded5fe,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef integrations fill:#f9d9f4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef public fill:#e0e0ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
     classDef system fill:transparent,stroke:#494238,stroke-width:3px
-    class GW entry
-    class M1,M2 domain
-    class O1,I1,BUS flow
-    class P2 contract
-    class S1,S2,EXT ext
+    class M1,M2 modules
+    class O1 orchestrator
+    class I1 integrations
+    class P2 public
+    class BUS common
+    class EXT external
+    class GW,S1,S2 infra
     class D1,D2,DB pkg
     class MM system
     linkStyle default stroke-dasharray:6 4
@@ -300,8 +304,8 @@ flowchart LR
     AC -. "evento" .-> EN
     AC -. "✗ llamada" .-> EN
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    class EN,AC,ID,CF domain
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    class EN,AC,ID,CF modules
     linkStyle default stroke-dasharray:6 4
     linkStyle 5 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
@@ -369,8 +373,8 @@ flowchart LR
     D --> E("5 · eventos al broker<br/>con outbox")
     E --> F("6 · el gateway envía<br/>/api/&lt;d&gt;/… al ms")
 
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    class A,B,C,D,E,F flow
+    classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
+    class A,B,C,D,E,F orchestrator
     linkStyle default stroke-dasharray:6 4
 ```
 

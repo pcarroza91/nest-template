@@ -46,15 +46,19 @@ flowchart TB
     RESP -. "Environment" .-> ENV
     RES --> DB
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class MAIN,APPM,HEALTH entry
-    class RES,IDN domain
-    class RESP,EXC,DTO,SEC,ENV,DBC,LOG shared
-    class DB ext
+    class MAIN,APPM bootstrap
+    class HEALTH health
+    class RES,IDN modules
+    class RESP,EXC,DTO,SEC common
+    class ENV,DBC,LOG config
+    class DB infra
     class BOOT,MODULES,COMMON,CONFIG pkg
     linkStyle default stroke-dasharray:6 4
 ```
@@ -87,15 +91,19 @@ flowchart LR
 
     ROOT --> SRC & TST & OAS & DCK & DOCS
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class MAINF,HLT entry
-    class MRES,MIDN domain
-    class CFG,CDEC,CDTO,CEXC,CFIL,CGRD shared
-    class TST,OAS,DCK,DOCS ext
+    class MAINF bootstrap
+    class HLT health
+    class MRES,MIDN modules
+    class CDEC,CDTO,CEXC,CFIL,CGRD common
+    class CFG config
+    class TST,OAS,DCK,DOCS infra
     class ROOT,SRC,COM,MODS pkg
     linkStyle default stroke-dasharray:6 4
 ```
@@ -118,13 +126,15 @@ flowchart LR
     PFX -- "sí" --> VER
     VER --> BIZ & INT
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class VER,BIZ,INT,HEALTHR entry
-    class DOCSR shared
-    class REQ ext
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class VER,DOCSR bootstrap
+    class HEALTHR health
+    class REQ external
+    class BIZ,INT controller
     class PFX decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -162,11 +172,23 @@ flowchart LR
         end
     end
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef service fill:#cdc2fa,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef business fill:#eac393,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef repository fill:#9ad7b1,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef entity fill:#76d9db,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef mapper fill:#f8b6d8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef models fill:#ffb6b3,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class F2 entry
-    class F1,F3,F4,F5,F6,F7,F8,F9,F10,F11 domain
+    class F1 modules
+    class F2 controller
+    class F3 service
+    class F4 business
+    class F5 repository
+    class F11 entity
+    class F6 mapper
+    class F7,F8,F9,F10 models
     class RESF,FB,FR,FM,FD,FE pkg
     linkStyle default stroke-dasharray:6 4
 ```
@@ -189,13 +211,21 @@ flowchart LR
     REPO --> ORM
     ORM -.-> ENT
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef service fill:#cdc2fa,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef business fill:#eac393,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef repository fill:#9ad7b1,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef entity fill:#76d9db,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef mapper fill:#f8b6d8,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class CTRL entry
-    class SVC,BIZ,REPO,MAP,ENT domain
-    class ORM ext
+    class ORM infra
+    class CTRL controller
+    class SVC service
+    class BIZ business
+    class REPO repository
+    class ENT entity
+    class MAP mapper
     class RES pkg
     linkStyle default stroke-dasharray:6 4
 ```
@@ -232,14 +262,14 @@ Decisiones que el módulo fija como referencia:
 ```mermaid
 sequenceDiagram
     actor CL as Cliente
-    box rgba(253,224,163,0.6) resource
+    box rgba(239,226,192,0.6) resource
         participant C as ResourceController
         participant S as ResourceService
         participant R as ResourceRepository
         participant B as ResourceBusiness
         participant M as ResourceMapper
     end
-    box rgba(246,193,178,0.6) externo
+    box rgba(222,214,206,0.6) externo
         participant DB as Base de datos
     end
 
@@ -271,12 +301,12 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor CL as Cliente
-    box rgba(253,224,163,0.6) resource
+    box rgba(239,226,192,0.6) resource
         participant C as ResourceController
         participant S as ResourceService
         participant R as ResourceRepository
     end
-    box rgba(246,193,178,0.6) externo
+    box rgba(222,214,206,0.6) externo
         participant DB as Base de datos
     end
 
@@ -327,8 +357,8 @@ flowchart LR
     USERS -- "SessionSummary" --> SE
     BO -- "User · UserStatus" --> USERS
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    class USERS,BO,AM,RA,SE domain
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    class USERS,BO,AM,RA,SE modules
     linkStyle default stroke-dasharray:6 4
 ```
 
@@ -398,14 +428,14 @@ flowchart LR
     FILES -- "process.env" --> DBO
     LGP & DBO --> APPM
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class MAIN,APPM entry
-    class VAL,SYNC,NS,DBO,LGP,CS shared
-    class FILES ext
+    class MAIN,APPM bootstrap
+    class VAL,SYNC,NS,DBO,LGP,CS config
+    class FILES infra
     class STOP bad
     class CONFIG,BOOT pkg
     linkStyle default stroke-dasharray:6 4
@@ -426,12 +456,12 @@ flowchart TB
     ENVQ -- "prod" --> PROD
     ENVQ -- "development · production · …" --> OTHER
 
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
-    class DEV,QA,PROD shared
-    class OTHER bad
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class DEV,QA,PROD config
     class ENVQ decision
+    class OTHER bad
     linkStyle default stroke-dasharray:6 4
 ```
 
@@ -471,18 +501,18 @@ flowchart LR
     PAGQ -- "sí" --> OKP
     THROW --> FIL --> ERR
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class CTRL entry
-    class THROW domain
-    class INT,FIL,MSG shared
-    class OK,OKP,ERR ext
-    class COMMON pkg
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class THROW modules
+    class INT,FIL,MSG common
+    class OK,OKP,ERR external
+    class CTRL controller
     class PAGQ decision
+    class COMMON pkg
     linkStyle default stroke-dasharray:6 4
 ```
 
@@ -526,11 +556,11 @@ flowchart TB
     R3 & R5 --> LOG
     R3 & R5 -.-> OPQ
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    class E domain
-    class R1,R2,R3,R4,R5,LOG,OPQ shared
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class E modules
+    class R1,R2,R3,R4,R5,LOG,OPQ common
     class Q1,Q2,Q3,Q4 decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -616,11 +646,11 @@ flowchart TB
     SY -- "no" --> SYOFF
     SYON & SYOFF --> OPTS
 
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class SSLON,SSLOFF,SYON,SYOFF,OPTS shared
-    class FILE,PG,MY,MS ext
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class SSLON,SSLOFF,SYON,SYOFF,OPTS config
+    class FILE,PG,MY,MS infra
     class T,SSL,SY decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -659,13 +689,17 @@ flowchart LR
     V --> CT
     IN -. "una línea por request" .-> L
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class H,C,V,CT entry
-    class GJ,L shared
-    class IN ext
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class H,C,V bootstrap
+    class GJ common
+    class L config
+    class IN external
+    class CT controller
     class G decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -704,11 +738,21 @@ flowchart LR
     ERRL -. "causa raíz (única)" .-> FIL
     INFO & WARN & ERRL & FIL --> OUT
 
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class RID,NOLOG,PH,INFO,WARN,ERRL,FIL shared
-    class REQ,OUT ext
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef info fill:#c3e7b4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef warn fill:#f9dd97,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef error fill:#ffb7b7,stroke:#494238,stroke-width:2px,color:#3c4747
+    class FIL common
+    class RID,PH,NOLOG config
+    class INFO info
+    class WARN warn
+    class ERRL error
+    class REQ external
+    class OUT infra
     class SIL,LVL decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -727,10 +771,10 @@ flowchart LR
     K8S -- "¿listo?" --> RDY
     RDY --> DBP & MEM
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class LIV,RDY,DBP,MEM entry
-    class K8S ext
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    class LIV,RDY,DBP,MEM health
+    class K8S infra
     linkStyle default stroke-dasharray:6 4
 ```
 
@@ -761,13 +805,13 @@ flowchart LR
     EN -- "no" --> NO
     SW -. "debe coincidir" .- OAS
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class SC entry
-    class DEC,PLG,SW,NO shared
-    class OAS ext
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef models fill:#ffb6b3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class PLG,SW,NO,SC bootstrap
+    class OAS external
+    class DEC models
     class EN decision
     linkStyle default stroke-dasharray:6 4
 ```
@@ -792,8 +836,8 @@ flowchart LR
     BUILD -- "dist/" --> RUN
     PDEPS -- "node_modules/" --> RUN
 
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    class BASE,BUILD,PDEPS,RUN flow
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    class BASE,BUILD,PDEPS,RUN infra
     linkStyle default stroke-dasharray:6 4
 ```
 

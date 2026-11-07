@@ -61,12 +61,12 @@ flowchart LR
     DOWN -. "eventos, nunca HTTP de vuelta" .-> MS
     MS -- "lee y escribe" --> DB
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef main fill:#fde0a3,stroke:#494238,stroke-width:3px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef main fill:#efe2c0,stroke:#494238,stroke-width:3px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class GW entry
-    class C,UP,DOWN,DB ext
+    class C,UP,DOWN external
+    class GW,DB infra
     class MS main
     class PUB,INT pkg
     linkStyle default stroke-dasharray:6 4
@@ -106,14 +106,20 @@ flowchart TB
     ORC -- "usa" --> COMMON
     COMMON -. "solo el enum de entornos" .-> CONFIG
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    class BOOT,HEALTH entry
-    class MOD domain
-    class ORCH,ORC flow
-    class COMMON,CONFIG shared
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef integrations fill:#f9d9f4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    class BOOT bootstrap
+    class HEALTH health
+    class MOD modules
+    class ORCH orchestrator
+    class ORC integrations
+    class COMMON common
+    class CONFIG config
     linkStyle default stroke-dasharray:6 4
 ```
 
@@ -364,15 +370,27 @@ flowchart LR
     REPO -.-> PAG
     MAP -.-> DTO
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef service fill:#cdc2fa,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef business fill:#eac393,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef libs fill:#c5cf96,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef repository fill:#9ad7b1,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef entity fill:#76d9db,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef mapper fill:#f8b6d8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef models fill:#ffb6b3,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class CTRL entry
-    class DTO,SVC,BIZ,LIB,REPO,MAP,ENT,OTHER domain
-    class EXC,PAG shared
-    class DB ext
+    class EXC,PAG common
+    class DB infra
+    class CTRL controller
+    class SVC,OTHER service
+    class BIZ business
+    class LIB libs
+    class REPO repository
+    class ENT entity
+    class MAP mapper
+    class DTO models
     class MOD,COMMON pkg
     linkStyle default stroke-dasharray:6 4
 ```
@@ -387,10 +405,18 @@ flowchart LR
     X -. "✗" .-> R("«component»<br/>Repository · Business · Lib<br/>Mapper · Entidad<br/>models/interfaces · types · constants")
     C("«component»<br/>Controller") -. "✗" .-> R2("«component»<br/>Repository · ORM")
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    class APPM,C entry
-    class M,X,S,D,R,R2 domain
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef service fill:#cdc2fa,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef repository fill:#9ad7b1,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef models fill:#ffb6b3,stroke:#494238,stroke-width:2px,color:#3c4747
+    class APPM bootstrap
+    class M,X,R modules
+    class C controller
+    class S service
+    class R2 repository
+    class D models
     linkStyle default stroke-dasharray:6 4
     linkStyle 3,4 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
@@ -414,8 +440,8 @@ flowchart LR
     A -- "import type de B/models" --> B
     B -. "✗ ciclo" .-> A
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    class A,B domain
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    class A,B modules
     linkStyle default stroke-dasharray:6 4
     linkStyle 2 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
@@ -437,12 +463,12 @@ flowchart LR
         B2 -.-> COM
     end
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    class A1,B1,A2,B2,C domain
-    class COM shared
+    class A1,B1,A2,B2,C modules
+    class COM common
     class MAL bad
     class BIEN pkg
     linkStyle default stroke-dasharray:6 4
@@ -465,23 +491,23 @@ sobre a la salida y el filtro global traduce cualquier excepción.
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(246,193,178,0.6) front
+    box rgba(255,217,203,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(188,225,255,0.6) borde
+    box rgba(222,214,206,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(188,225,255,0.6) bootstrap
+    box rgba(195,231,255,0.6) bootstrap
         participant P as Guard · ValidationPipe
         participant I as Interceptor<br/>de respuesta
     end
-    box rgba(253,224,163,0.6) Módulo
+    box rgba(239,226,192,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
         participant M as Mapper
     end
-    box rgba(246,193,178,0.6) externo
+    box rgba(222,214,206,0.6) externo
         participant DB as Base de datos
     end
 
@@ -508,24 +534,24 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(246,193,178,0.6) front
+    box rgba(255,217,203,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(188,225,255,0.6) borde
+    box rgba(222,214,206,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(188,225,255,0.6) bootstrap
+    box rgba(195,231,255,0.6) bootstrap
         participant P as ValidationPipe
         participant I as Interceptor
     end
-    box rgba(253,224,163,0.6) Módulo
+    box rgba(239,226,192,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
         participant B as Business
         participant M as Mapper
     end
-    box rgba(246,193,178,0.6) externo
+    box rgba(222,214,206,0.6) externo
         participant DB as Base de datos
     end
 
@@ -562,24 +588,24 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(246,193,178,0.6) front
+    box rgba(255,217,203,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(188,225,255,0.6) borde
+    box rgba(222,214,206,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(253,224,163,0.6) Módulo
+    box rgba(239,226,192,0.6) Módulo
         participant S as Service
         participant R as Repository
         participant B as Business
     end
-    box rgba(244,208,230,0.6) integrations
+    box rgba(249,217,244,0.6) integrations
         participant O as Client
     end
-    box rgba(210,231,228,0.6) common
+    box rgba(190,236,221,0.6) common
         participant F as Filtro global
     end
-    box rgba(210,231,228,0.6) observabilidad
+    box rgba(213,232,200,0.6) observabilidad
         participant L as Logger
     end
 
@@ -631,17 +657,17 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(246,193,178,0.6) front
+    box rgba(255,217,203,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(188,225,255,0.6) borde
+    box rgba(222,214,206,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(188,225,255,0.6) bootstrap
+    box rgba(195,231,255,0.6) bootstrap
         participant P as ValidationPipe
         participant I as Interceptor
     end
-    box rgba(253,224,163,0.6) Módulo
+    box rgba(239,226,192,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
@@ -687,12 +713,14 @@ flowchart TB
     MOD -. "✗" .-> ORCH
     INT -. "✗" .-> MOD
 
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
-    class MOD domain
-    class ORCH,INT flow
-    class EXT ext
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef integrations fill:#f9d9f4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    class MOD modules
+    class ORCH orchestrator
+    class INT integrations
+    class EXT external
     linkStyle default stroke-dasharray:6 4
     linkStyle 4,5 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
@@ -739,16 +767,16 @@ Una integración no tiene controllers, entidades, base de datos ni reglas de neg
 
 ```mermaid
 sequenceDiagram
-    box rgba(253,224,163,0.6) Módulo
+    box rgba(239,226,192,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant B as Business
         participant R as Repository
     end
-    box rgba(244,208,230,0.6) integrations
+    box rgba(249,217,244,0.6) integrations
         participant O as academic.client
     end
-    box rgba(246,193,178,0.6) externo
+    box rgba(255,217,203,0.6) externo
         participant X as ms-academic
     end
 
@@ -875,18 +903,18 @@ src/orchestrator/
 
 ```mermaid
 sequenceDiagram
-    box rgba(188,225,255,0.6) entrada
+    box rgba(255,215,221,0.6) entrada
         participant C as enrollment-process.controller
     end
-    box rgba(244,208,230,0.6) orchestrator
+    box rgba(255,215,221,0.6) orchestrator
         participant O as Orchestrator
     end
-    box rgba(253,224,163,0.6) módulos
+    box rgba(239,226,192,0.6) módulos
         participant ST as students.service
         participant SE as sections.service
         participant EN as enrollments.service
     end
-    box rgba(244,208,230,0.6) eventos
+    box rgba(190,236,221,0.6) eventos
         participant EV as Eventos
     end
 
@@ -966,15 +994,33 @@ flowchart TB
     K -- "DTO, enum, interfaz,<br/>tipo o constante" --> DT("models/")
     K -- "forma en la BD" --> EN("entities/")
 
-    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
-    class CT entry
-    class NEW,SV,BZ,LB,RP,MP,DT,EN domain
-    class OC,OR flow
-    class CFG,COM shared
-    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef integrations fill:#f9d9f4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef controller fill:#9cceff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef service fill:#cdc2fa,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef business fill:#eac393,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef libs fill:#c5cf96,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef repository fill:#9ad7b1,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef entity fill:#76d9db,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef mapper fill:#f8b6d8,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef models fill:#ffb6b3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef decision fill:#eeeae4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class NEW modules
+    class OC orchestrator
+    class OR integrations
+    class COM common
+    class CFG config
+    class CT controller
+    class SV service
+    class BZ business
+    class LB libs
+    class RP repository
+    class EN entity
+    class MP mapper
+    class DT models
     class Q,T,O,K decision
     linkStyle default stroke-dasharray:6 4
 ```
