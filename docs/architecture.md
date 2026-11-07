@@ -16,24 +16,24 @@ para generar OpenAPI y Scalar para renderizarlo. Node ≥ 22, pnpm 11. Aplica la
 ```mermaid
 flowchart TB
     subgraph BOOT["«package» bootstrap"]
-        MAIN["«component»<br/>main.ts<br/>helmet · CORS · /api · URI v1<br/>ValidationPipe · Scalar"]
-        APPM["«component»<br/>app.module.ts<br/>ConfigModule · LoggerModule<br/>TypeOrmModule · módulos"]
+        MAIN("«component»<br/>main.ts<br/>helmet · CORS · /api · URI v1<br/>ValidationPipe · Scalar")
+        APPM("«component»<br/>app.module.ts<br/>ConfigModule · LoggerModule<br/>TypeOrmModule · módulos")
     end
     subgraph MODULES["«package» src/modules"]
-        RES["«component»<br/>resource<br/>módulo de ejemplo completo"]
-        IDN["«component»<br/>auth · users · organizations<br/>sessions · role-assignments · …<br/>Identity Service (contrato)"]
+        RES("«component»<br/>resource<br/>módulo de ejemplo completo")
+        IDN("«component»<br/>auth · users · organizations<br/>sessions · role-assignments · …<br/>Identity Service (contrato)")
     end
-    HEALTH["«component»<br/>src/health<br/>terminus"]
+    HEALTH("«component»<br/>src/health<br/>terminus")
     subgraph COMMON["«package» src/common"]
-        RESP["«component»<br/>interceptors · filters<br/>sobre ApiResponse"]
-        EXC["«component»<br/>exceptions<br/>domain-exceptions"]
-        DTO["«component»<br/>dto · interfaces<br/>paginación · Ack · Error"]
-        SEC["«component»<br/>guards · decorators<br/>JwtAuthGuard · @Public"]
+        RESP("«component»<br/>interceptors · filters<br/>sobre ApiResponse")
+        EXC("«component»<br/>exceptions<br/>domain-exceptions")
+        DTO("«component»<br/>dto · interfaces<br/>paginación · Ack · Error")
+        SEC("«component»<br/>guards · decorators<br/>JwtAuthGuard · @Public")
     end
     subgraph CONFIG["«package» src/config"]
-        ENV["«component»<br/>env.validation.ts<br/>configuration.ts"]
-        DBC["«component»<br/>database.config.ts"]
-        LOG["«component»<br/>logger.config.ts"]
+        ENV("«component»<br/>env.validation.ts<br/>configuration.ts")
+        DBC("«component»<br/>database.config.ts")
+        LOG("«component»<br/>logger.config.ts")
     end
     DB[("Postgres<br/>u otro motor")]
 
@@ -46,70 +46,58 @@ flowchart TB
     RESP -. "Environment" .-> ENV
     RES --> DB
 
-    classDef pkgApp fill:transparent,stroke:#475569,stroke-dasharray:4 3
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef pkgCore fill:transparent,stroke:#d14343,stroke-dasharray:4 3
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef pkgShared fill:transparent,stroke:#2f9254,stroke-dasharray:4 3
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class BOOT pkgApp
-    class MAIN,APPM app
-    class MODULES pkgFeature
-    class RES,IDN,HEALTH feature
-    class CONFIG pkgCore
-    class ENV,DBC,LOG core
-    class COMMON pkgShared
-    class RESP,EXC,DTO,SEC shared
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class MAIN,APPM,HEALTH entry
+    class RES,IDN domain
+    class RESP,EXC,DTO,SEC,ENV,DBC,LOG shared
     class DB ext
+    class BOOT,MODULES,COMMON,CONFIG pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Mapa del repositorio:
 
 ```mermaid
 flowchart LR
-    ROOT["«package» ms-template/"]
+    ROOT("«package» ms-template/")
     subgraph SRC["«package» src/"]
-        MAINF["main.ts<br/>app.module.ts"]
-        CFG["config/<br/>env.validation · configuration<br/>database.config · logger.config"]
+        MAINF("main.ts<br/>app.module.ts")
+        CFG("config/<br/>env.validation · configuration<br/>database.config · logger.config")
         subgraph COM["«package» common/"]
-            CDEC["decorators/<br/>@ResponseMessage · @Public<br/>@ApiStandardResponse · @ApiPaginatedResponse"]
-            CDTO["dto/ · interfaces/<br/>PaginationQueryDto · PaginatedResultDto<br/>AckResponse · Error · ApiResponse"]
-            CEXC["exceptions/<br/>DomainException + 6 subclases"]
-            CFIL["filters/ · interceptors/<br/>GlobalExceptionFilter · ResponseInterceptor"]
-            CGRD["guards/<br/>JwtAuthGuard (stub)"]
+            CDEC("decorators/<br/>@ResponseMessage · @Public<br/>@ApiStandardResponse · @ApiPaginatedResponse")
+            CDTO("dto/ · interfaces/<br/>PaginationQueryDto · PaginatedResultDto<br/>AckResponse · Error · ApiResponse")
+            CEXC("exceptions/<br/>DomainException + 6 subclases")
+            CFIL("filters/ · interceptors/<br/>GlobalExceptionFilter · ResponseInterceptor")
+            CGRD("guards/<br/>JwtAuthGuard (stub)")
         end
-        HLT["health/"]
+        HLT("health/")
         subgraph MODS["«package» modules/"]
-            MRES["resource/<br/>ejemplo completo · §11"]
-            MIDN["auth · users · organizations · backoffice<br/>auth-methods · sessions · role-assignments<br/>permission-overrides · internal · §13"]
+            MRES("resource/<br/>ejemplo completo · §11")
+            MIDN("auth · users · organizations · backoffice<br/>auth-methods · sessions · role-assignments<br/>permission-overrides · internal · §13")
         end
     end
-    TST["test/<br/>e2e · sqlite en memoria"]
-    OAS["identity_service_openapi.yaml<br/>contrato de Identity"]
-    DCK["Dockerfile · docker-compose.yml<br/>§20"]
-    DOCS["docs/"]
+    TST("test/<br/>e2e · sqlite en memoria")
+    OAS("identity_service_openapi.yaml<br/>contrato de Identity")
+    DCK("Dockerfile · docker-compose.yml<br/>§20")
+    DOCS("docs/")
 
     ROOT --> SRC & TST & OAS & DCK & DOCS
 
-    classDef pkgApp fill:transparent,stroke:#475569,stroke-dasharray:4 3
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef pkgShared fill:transparent,stroke:#2f9254,stroke-dasharray:4 3
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class ROOT,SRC pkgApp
-    class MAINF app
-    class CFG core
-    class COM pkgShared
-    class CDEC,CDTO,CEXC,CFIL,CGRD shared
-    class MODS pkgFeature
-    class MRES,MIDN,HLT feature
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class MAINF,HLT entry
+    class MRES,MIDN domain
+    class CFG,CDEC,CDTO,CEXC,CFIL,CGRD shared
     class TST,OAS,DCK,DOCS ext
+    class ROOT,SRC,COM,MODS pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Rutas resultantes:
@@ -118,11 +106,11 @@ Rutas resultantes:
 flowchart LR
     REQ(["Petición HTTP"])
     PFX{"¿Empieza con<br/>/api?"}
-    DOCSR["/api/docs<br/>Scalar · solo dev y qa<br/>sin versión"]
-    VER["/api/v1/…<br/>versionado por URI"]
-    BIZ["/api/v1/&lt;recurso&gt;<br/>API de negocio · gateway"]
-    INT["/api/v1/internal/…<br/>entre microservicios · red interna"]
-    HEALTHR["/health · /health/liveness<br/>probes · sin prefijo ni versión"]
+    DOCSR("/api/docs<br/>Scalar · solo dev y qa<br/>sin versión")
+    VER("/api/v1/…<br/>versionado por URI")
+    BIZ("/api/v1/&lt;recurso&gt;<br/>API de negocio · gateway")
+    INT("/api/v1/internal/…<br/>entre microservicios · red interna")
+    HEALTHR("/health · /health/liveness<br/>probes · sin prefijo ni versión")
 
     REQ --> PFX
     PFX -- "no" --> HEALTHR
@@ -130,12 +118,15 @@ flowchart LR
     PFX -- "sí" --> VER
     VER --> BIZ & INT
 
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class PFX,VER app
-    class BIZ,INT,HEALTHR feature
-    class DOCSR,REQ ext
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class VER,BIZ,INT,HEALTHR entry
+    class DOCSR shared
+    class REQ ext
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class PFX decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 ## 11. Módulo de ejemplo: `resource`
@@ -148,54 +139,49 @@ Archivos del módulo:
 ```mermaid
 flowchart LR
     subgraph RESF["«package» src/modules/resource/"]
-        F1["resource.module.ts<br/>providers: Service · Business · Repository · Mapper<br/>exports: [Service]"]
-        F2["resource.controller.ts<br/>/resources"]
-        F3["resource.service.ts<br/>+ .spec.ts · orquesta"]
+        F1("resource.module.ts<br/>providers: Service · Business · Repository · Mapper<br/>exports: [Service]")
+        F2("resource.controller.ts<br/>/resources")
+        F3("resource.service.ts<br/>+ .spec.ts · orquesta")
         subgraph FB["«package» business/"]
-            F4["resource.business.ts<br/>+ .spec.ts<br/>TRANSIENT · interfaz fluida · RULES"]
+            F4("resource.business.ts<br/>+ .spec.ts<br/>TRANSIENT · interfaz fluida · RULES")
         end
         subgraph FR["«package» repositories/"]
-            F5["resource.repository.ts"]
+            F5("resource.repository.ts")
         end
         subgraph FM["«package» mappers/"]
-            F6["resource.mapper.ts"]
+            F6("resource.mapper.ts")
         end
         subgraph FD["«package» dto/"]
-            F7["create-resource.dto.ts"]
-            F8["update-resource.dto.ts<br/>PartialType(OmitType(Create, code))"]
-            F9["find-resources-query.dto.ts<br/>extiende PaginationQueryDto"]
-            F10["resource-response.dto.ts<br/>ResourceResponseDto · ResourceCalculationDto"]
+            F7("create-resource.dto.ts")
+            F8("update-resource.dto.ts<br/>PartialType(OmitType(Create, code))")
+            F9("find-resources-query.dto.ts<br/>extiende PaginationQueryDto")
+            F10("resource-response.dto.ts<br/>ResourceResponseDto · ResourceCalculationDto")
         end
         subgraph FE["«package» entities/"]
-            F11["resource.entity.ts<br/>tabla resources · soft delete"]
+            F11("resource.entity.ts<br/>tabla resources · soft delete")
         end
     end
 
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef root fill:transparent,stroke-width:2px
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef store fill:transparent,stroke:#6d45d1,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    class RESF,FB,FR,FM,FD,FE pkgFeature
-    class F1,F2 root
-    class F3 service
-    class F4 store
-    class F5,F11 core
-    class F6,F7,F8,F9,F10 pure
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class F2 entry
+    class F1,F3,F4,F5,F6,F7,F8,F9,F10,F11 domain
+    class RESF,FB,FR,FM,FD,FE pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 ```mermaid
 flowchart LR
     subgraph RES["«package» modules/resource"]
-        CTRL["«component»<br/>ResourceController"]
-        SVC["«component»<br/>ResourceService"]
-        BIZ["«component»<br/>ResourceBusiness<br/>TRANSIENT"]
-        REPO["«component»<br/>ResourceRepository"]
-        MAP["«component»<br/>ResourceMapper"]
-        ENT["«component»<br/>Resource<br/>entity"]
+        CTRL("«component»<br/>ResourceController")
+        SVC("«component»<br/>ResourceService")
+        BIZ("«component»<br/>ResourceBusiness<br/>TRANSIENT")
+        REPO("«component»<br/>ResourceRepository")
+        MAP("«component»<br/>ResourceMapper")
+        ENT("«component»<br/>Resource<br/>entity")
     end
-    ORM["«component»<br/>Repository&lt;Resource&gt;<br/>TypeORM"]
+    ORM("«component»<br/>Repository&lt;Resource&gt;<br/>TypeORM")
 
     CTRL --> SVC
     SVC --> REPO & BIZ & MAP
@@ -203,20 +189,15 @@ flowchart LR
     REPO --> ORM
     ORM -.-> ENT
 
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef root fill:transparent,stroke-width:2px
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef store fill:transparent,stroke:#6d45d1,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class RES pkgFeature
-    class CTRL root
-    class SVC service
-    class BIZ store
-    class REPO,ENT core
-    class MAP pure
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class CTRL entry
+    class SVC,BIZ,REPO,MAP,ENT domain
     class ORM ext
+    class RES pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 | Método y ruta                    | Service     | Business                                                                                       | Respuesta                        |
@@ -251,14 +232,14 @@ Decisiones que el módulo fija como referencia:
 ```mermaid
 sequenceDiagram
     actor CL as Cliente
-    box rgba(29,78,216,0.15) resource
+    box rgba(253,224,163,0.6) resource
         participant C as ResourceController
         participant S as ResourceService
         participant R as ResourceRepository
         participant B as ResourceBusiness
         participant M as ResourceMapper
     end
-    box rgba(160,124,59,0.15) externo
+    box rgba(246,193,178,0.6) externo
         participant DB as Base de datos
     end
 
@@ -290,12 +271,12 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor CL as Cliente
-    box rgba(29,78,216,0.15) resource
+    box rgba(253,224,163,0.6) resource
         participant C as ResourceController
         participant S as ResourceService
         participant R as ResourceRepository
     end
-    box rgba(160,124,59,0.15) externo
+    box rgba(246,193,178,0.6) externo
         participant DB as Base de datos
     end
 
@@ -335,19 +316,20 @@ Dependencias actuales entre módulos (solo tipos de `dto/`, sin dependencia en t
 
 ```mermaid
 flowchart LR
-    USERS["«component»<br/>users"]
-    BO["«component»<br/>backoffice"]
-    AM["«component»<br/>auth-methods"]
-    RA["«component»<br/>role-assignments"]
-    SE["«component»<br/>sessions"]
+    USERS("«component»<br/>users")
+    BO("«component»<br/>backoffice")
+    AM("«component»<br/>auth-methods")
+    RA("«component»<br/>role-assignments")
+    SE("«component»<br/>sessions")
 
     USERS -- "AuthMethodSummary · AuthMethodType" --> AM
     USERS -- "RoleAssignment · RoleAssignmentStatus" --> RA
     USERS -- "SessionSummary" --> SE
     BO -- "User · UserStatus" --> USERS
 
-    classDef page fill:transparent,stroke:#1d4ed8,stroke-width:2px
-    class USERS,BO,AM,RA,SE page
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    class USERS,BO,AM,RA,SE domain
+    linkStyle default stroke-dasharray:6 4
 ```
 
 El grafo no tiene ciclos. Cuando estos módulos ganen persistencia, una necesidad de **datos** (no
@@ -392,17 +374,17 @@ Aplica la [§9](architecture/modular-microservice.md#9-arranque-y-entornos).
 flowchart LR
     FILES[(".env.local<br/>.env<br/>variables del proceso")]
     subgraph CONFIG["«package» src/config"]
-        VAL["«component»<br/>validateEnv<br/>EnvironmentVariables"]
-        SYNC["«component»<br/>assertSafeSynchronize"]
-        NS["«component»<br/>configuration.ts<br/>app · docs · logger"]
-        DBO["«component»<br/>buildDataSourceOptions"]
-        LGP["«component»<br/>buildLoggerParams"]
+        VAL("«component»<br/>validateEnv<br/>EnvironmentVariables")
+        SYNC("«component»<br/>assertSafeSynchronize")
+        NS("«component»<br/>configuration.ts<br/>app · docs · logger")
+        DBO("«component»<br/>buildDataSourceOptions")
+        LGP("«component»<br/>buildLoggerParams")
     end
     STOP(["No arranca<br/>error con la variable"])
-    CS["«component»<br/>ConfigService<br/>global · cache"]
+    CS("«component»<br/>ConfigService<br/>global · cache")
     subgraph BOOT["«package» bootstrap"]
-        MAIN["«component»<br/>main.ts"]
-        APPM["«component»<br/>app.module.ts"]
+        MAIN("«component»<br/>main.ts")
+        APPM("«component»<br/>app.module.ts")
     end
 
     FILES --> VAL
@@ -416,18 +398,17 @@ flowchart LR
     FILES -- "process.env" --> DBO
     LGP & DBO --> APPM
 
-    classDef pkgApp fill:transparent,stroke:#475569,stroke-dasharray:4 3
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef pkgCore fill:transparent,stroke:#d14343,stroke-dasharray:4 3
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:3px
-    class BOOT pkgApp
-    class MAIN,APPM,CS app
-    class CONFIG pkgCore
-    class VAL,SYNC,NS,DBO,LGP core
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class MAIN,APPM entry
+    class VAL,SYNC,NS,DBO,LGP,CS shared
     class FILES ext
     class STOP bad
+    class CONFIG,BOOT pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Qué decide cada entorno:
@@ -435,9 +416,9 @@ Qué decide cada entorno:
 ```mermaid
 flowchart TB
     ENVQ{"NODE_ENV"}
-    DEV["<b>dev</b><br/>docs: sí<br/>synchronize: admitido<br/>errores 5xx: detalle real"]
-    QA["<b>qa</b><br/>docs: sí<br/>synchronize: no arranca<br/>errores 5xx: detalle real"]
-    PROD["<b>prod</b><br/>docs: no<br/>synchronize: no arranca<br/>errores 5xx: opaco<br/>Express en modo production"]
+    DEV("<b>dev</b><br/>docs: sí<br/>synchronize: admitido<br/>errores 5xx: detalle real")
+    QA("<b>qa</b><br/>docs: sí<br/>synchronize: no arranca<br/>errores 5xx: detalle real")
+    PROD("<b>prod</b><br/>docs: no<br/>synchronize: no arranca<br/>errores 5xx: opaco<br/>Express en modo production")
     OTHER(["otro valor<br/>no arranca"])
 
     ENVQ -- "dev" --> DEV
@@ -445,14 +426,13 @@ flowchart TB
     ENVQ -- "prod" --> PROD
     ENVQ -- "development · production · …" --> OTHER
 
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:3px
-    class DEV shared
-    class QA feature
-    class PROD core
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
+    class DEV,QA,PROD shared
     class OTHER bad
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class ENVQ decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 | Comportamiento               | `dev` |      `qa`      |     `prod`     | Dónde se decide                                                             |
@@ -472,17 +452,17 @@ Aplica el principio 5 y la [§7.3](architecture/modular-microservice.md#73-error
 
 ```mermaid
 flowchart LR
-    CTRL["«component»<br/>Controller<br/>retorna dato plano"]
-    THROW["«component»<br/>cualquier capa<br/>lanza excepción"]
+    CTRL("«component»<br/>Controller<br/>retorna dato plano")
+    THROW("«component»<br/>cualquier capa<br/>lanza excepción")
     subgraph COMMON["«package» src/common"]
-        INT["«component»<br/>ResponseInterceptor"]
+        INT("«component»<br/>ResponseInterceptor")
         PAGQ{"¿PaginatedResultDto?"}
-        FIL["«component»<br/>GlobalExceptionFilter"]
-        MSG["«component»<br/>@ResponseMessage"]
+        FIL("«component»<br/>GlobalExceptionFilter")
+        MSG("«component»<br/>@ResponseMessage")
     end
-    OK["ApiResponse<br/>success: true<br/>data · meta · errors: null"]
-    OKP["ApiResponse<br/>success: true<br/>data: items · meta.pagination"]
-    ERR["ApiResponse<br/>success: false<br/>data: null · errors[]"]
+    OK("ApiResponse<br/>success: true<br/>data · meta · errors: null")
+    OKP("ApiResponse<br/>success: true<br/>data: items · meta.pagination")
+    ERR("ApiResponse<br/>success: false<br/>data: null · errors[]")
 
     CTRL --> INT
     MSG -. "message" .-> INT
@@ -491,16 +471,19 @@ flowchart LR
     PAGQ -- "sí" --> OKP
     THROW --> FIL --> ERR
 
-    classDef root fill:transparent,stroke-width:2px
-    classDef pkgShared fill:transparent,stroke:#2f9254,stroke-dasharray:4 3
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px
-    class CTRL,THROW root
-    class COMMON pkgShared
-    class INT,PAGQ,FIL,MSG shared
-    class OK,OKP ext
-    class ERR bad
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class CTRL entry
+    class THROW domain
+    class INT,FIL,MSG shared
+    class OK,OKP,ERR ext
+    class COMMON pkg
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class PAGQ decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 ```json
@@ -523,13 +506,13 @@ flowchart TB
     Q2{"2 · ¿HttpException?<br/>incluye ValidationPipe"}
     Q3{"3 · ¿QueryFailedError?"}
     Q4{"4 · ¿trae status 4xx?<br/>body-parser y compañía"}
-    R1["status de DOMAIN_EXCEPTION_STATUS<br/>(400 si no está registrada)<br/>code de la excepción · details"]
-    R2["su status<br/>un error por mensaje de validación"]
-    R3["500 · DATABASE_ERROR"]
-    R4["ese 4xx · BAD_REQUEST"]
-    R5["500 · INTERNAL_SERVER_ERROR"]
-    LOG["log con tipo y stack<br/>solo si status ≥ 500"]
-    OPQ["detalle real en dev y qa<br/>mensaje opaco en prod"]
+    R1("status de DOMAIN_EXCEPTION_STATUS<br/>(400 si no está registrada)<br/>code de la excepción · details")
+    R2("su status<br/>un error por mensaje de validación")
+    R3("500 · DATABASE_ERROR")
+    R4("ese 4xx · BAD_REQUEST")
+    R5("500 · INTERNAL_SERVER_ERROR")
+    LOG("log con tipo y stack<br/>solo si status ≥ 500")
+    OPQ("detalle real en dev y qa<br/>mensaje opaco en prod")
 
     E --> Q1
     Q1 -- "sí" --> R1
@@ -543,14 +526,13 @@ flowchart TB
     R3 & R5 --> LOG
     R3 & R5 -.-> OPQ
 
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef warn fill:transparent,stroke:#c79a00,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    class Q1,Q2,Q3,Q4 shared
-    class R1,R2,R4 warn
-    class R3,R5 bad
-    class LOG,OPQ,E pure
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class E domain
+    class R1,R2,R3,R4,R5,LOG,OPQ shared
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class Q1,Q2,Q3,Q4 decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Jerarquía de excepciones de dominio:
@@ -613,17 +595,17 @@ implícita. Un campo no declarado en el DTO es un 400.
 ```mermaid
 flowchart TB
     T{"DB_TYPE"}
-    FILE["sqlite · better-sqlite3<br/>database = ruta o :memory:"]
-    PG["postgres (por defecto)<br/>schema = DB_SCHEMA · public<br/>ssl"]
-    MY["mysql · mariadb<br/>utf8mb4 · timezone Z<br/>ssl"]
-    MS["mssql<br/>schema = dbo<br/>encrypt = DB_SSL"]
+    FILE("sqlite · better-sqlite3<br/>database = ruta o :memory:")
+    PG("postgres (por defecto)<br/>schema = DB_SCHEMA · public<br/>ssl")
+    MY("mysql · mariadb<br/>utf8mb4 · timezone Z<br/>ssl")
+    MS("mssql<br/>schema = dbo<br/>encrypt = DB_SSL")
     SSL{"DB_SSL"}
-    SSLON["rejectUnauthorized: true<br/>+ ca = DB_SSL_CA"]
-    SSLOFF["sin TLS"]
+    SSLON("rejectUnauthorized: true<br/>+ ca = DB_SSL_CA")
+    SSLOFF("sin TLS")
     SY{"DB_SYNCHRONIZE=true<br/>y NODE_ENV=dev?"}
-    SYON["synchronize: true"]
-    SYOFF["synchronize: false"]
-    OPTS["DataSourceOptions<br/>entities: **/*.entity{.ts,.js}"]
+    SYON("synchronize: true")
+    SYOFF("synchronize: false")
+    OPTS("DataSourceOptions<br/>entities: **/*.entity{.ts,.js}")
 
     T --> FILE & PG & MY & MS
     PG & MY --> SSL
@@ -634,14 +616,13 @@ flowchart TB
     SY -- "no" --> SYOFF
     SYON & SYOFF --> OPTS
 
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px
-    class T,SSL,SY pure
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class SSLON,SSLOFF,SYON,SYOFF,OPTS shared
     class FILE,PG,MY,MS ext
-    class SSLON,SSLOFF,SYOFF,OPTS core
-    class SYON bad
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class T,SSL,SY decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 - `buildDataSourceOptions(env)` es la única fuente de verdad de la conexión. Cambiar de motor es
@@ -664,13 +645,13 @@ Barreras por las que pasa cada petición, en el orden de ejecución de Nest:
 ```mermaid
 flowchart LR
     IN(["Petición"])
-    H["«component»<br/>helmet<br/>CSP estricto<br/>(docs: CSP con CDN de Scalar)"]
-    C["«component»<br/>CORS<br/>lista blanca CORS_ORIGINS"]
+    H("«component»<br/>helmet<br/>CSP estricto<br/>(docs: CSP con CDN de Scalar)")
+    C("«component»<br/>CORS<br/>lista blanca CORS_ORIGINS")
     G{"JwtAuthGuard<br/>¿@Public()?"}
-    GJ["validar JWT<br/>⚠ stub: hoy siempre pasa"]
-    V["«component»<br/>ValidationPipe<br/>whitelist · forbidNonWhitelisted"]
-    CT["«component»<br/>Controller"]
-    L["«component»<br/>logger<br/>redact: authorization · cookie<br/>password · token"]
+    GJ("validar JWT<br/>⚠ stub: hoy siempre pasa")
+    V("«component»<br/>ValidationPipe<br/>whitelist · forbidNonWhitelisted")
+    CT("«component»<br/>Controller")
+    L("«component»<br/>logger<br/>redact: authorization · cookie<br/>password · token")
 
     IN --> H --> C --> G
     G -- "sí" --> V
@@ -678,16 +659,15 @@ flowchart LR
     V --> CT
     IN -. "una línea por request" .-> L
 
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef warn fill:transparent,stroke:#c79a00,stroke-width:2px
-    classDef root fill:transparent,stroke:#1d4ed8,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    class H,C,V app
-    class G shared
-    class GJ warn
-    class CT root
-    class L,IN pure
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class H,C,V,CT entry
+    class GJ,L shared
+    class IN ext
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class G decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 - `helmet()` global con CSP estricto; un segundo `helmet()` solo en la ruta de docs permite el CDN de
@@ -704,15 +684,15 @@ flowchart LR
 ```mermaid
 flowchart LR
     REQ(["Petición"])
-    RID["genReqId<br/>x-request-id · x-correlation-id<br/>o UUID"]
+    RID("genReqId<br/>x-request-id · x-correlation-id<br/>o UUID")
     SIL{"¿/health?"}
-    NOLOG["sin log"]
-    PH["«component»<br/>pino-http<br/>req: id · method · url<br/>res: statusCode"]
+    NOLOG("sin log")
+    PH("«component»<br/>pino-http<br/>req: id · method · url<br/>res: statusCode")
     LVL{"status"}
-    INFO["INFO"]
-    WARN["WARN"]
-    ERRL["ERROR"]
-    FIL["«component»<br/>GlobalExceptionFilter<br/>err con tipo y stack"]
+    INFO("INFO")
+    WARN("WARN")
+    ERRL("ERROR")
+    FIL("«component»<br/>GlobalExceptionFilter<br/>err con tipo y stack")
     OUT[("salida<br/>LOG_PRETTY=true: una línea coloreada<br/>prod: JSON + service")]
 
     REQ --> RID --> SIL
@@ -724,18 +704,13 @@ flowchart LR
     ERRL -. "causa raíz (única)" .-> FIL
     INFO & WARN & ERRL & FIL --> OUT
 
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef warn fill:transparent,stroke:#c79a00,stroke-width:2px
-    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class REQ,RID,SIL,LVL,NOLOG pure
-    class PH core
-    class INFO shared
-    class WARN warn
-    class ERRL,FIL bad
-    class OUT ext
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class RID,NOLOG,PH,INFO,WARN,ERRL,FIL shared
+    class REQ,OUT ext
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class SIL,LVL decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Probes de salud:
@@ -743,19 +718,20 @@ Probes de salud:
 ```mermaid
 flowchart LR
     K8S(["orquestador<br/>HEALTHCHECK de Docker"])
-    LIV["GET /health/liveness<br/>{ status: ok }<br/>no toca dependencias"]
-    RDY["GET /health<br/>terminus"]
-    DBP["pingCheck database<br/>timeout 3 s"]
-    MEM["checkHeap<br/>512 MB"]
+    LIV("GET /health/liveness<br/>{ status: ok }<br/>no toca dependencias")
+    RDY("GET /health<br/>terminus")
+    DBP("pingCheck database<br/>timeout 3 s")
+    MEM("checkHeap<br/>512 MB")
 
     K8S -- "¿vive?" --> LIV
     K8S -- "¿listo?" --> RDY
     RDY --> DBP & MEM
 
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class LIV,RDY,DBP,MEM feature
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class LIV,RDY,DBP,MEM entry
     class K8S ext
+    linkStyle default stroke-dasharray:6 4
 ```
 
 - **Una línea por request** (pino-http): serializers que recortan `req`/`res`, nivel por status
@@ -772,12 +748,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    DEC["decoradores<br/>@ApiProperty · @ApiOperation<br/>@ApiStandardResponse · @ApiPaginatedResponse"]
-    PLG["plugin de nest-cli.json<br/>classValidatorShim · introspectComments"]
-    SW["«component»<br/>@nestjs/swagger<br/>SwaggerModule.createDocument"]
+    DEC("decoradores<br/>@ApiProperty · @ApiOperation<br/>@ApiStandardResponse · @ApiPaginatedResponse")
+    PLG("plugin de nest-cli.json<br/>classValidatorShim · introspectComments")
+    SW("«component»<br/>@nestjs/swagger<br/>SwaggerModule.createDocument")
     EN{"docs.enabled<br/>NODE_ENV ∈ {dev, qa}<br/>y DOCS_ENABLED ≠ false"}
-    SC["«component»<br/>Scalar apiReference<br/>GET /api/docs (ruta exacta)"]
-    NO["sin docs publicadas"]
+    SC("«component»<br/>Scalar apiReference<br/>GET /api/docs (ruta exacta)")
+    NO("sin docs publicadas")
     OAS[("identity_service_openapi.yaml<br/>contrato de referencia")]
 
     DEC & PLG --> SW --> EN
@@ -785,14 +761,15 @@ flowchart LR
     EN -- "no" --> NO
     SW -. "debe coincidir" .- OAS
 
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class DEC,PLG,NO,EN pure
-    class SW shared
-    class SC app
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class SC entry
+    class DEC,PLG,SW,NO shared
     class OAS ext
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class EN decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 `@nestjs/swagger` genera el documento desde los decoradores y el plugin de `nest-cli.json`
@@ -806,17 +783,18 @@ el código debe coincidir con él en rutas, cuerpos y respuestas.
 
 ```mermaid
 flowchart LR
-    BASE["«component»<br/>pnpm-base<br/>node:22-alpine · corepack"]
-    BUILD["«component»<br/>builder<br/>install --frozen-lockfile · nest build"]
-    PDEPS["«component»<br/>prod-deps<br/>install --prod"]
-    RUN["«component»<br/>runtime<br/>tini · usuario app · HEALTHCHECK"]
+    BASE("«component»<br/>pnpm-base<br/>node:22-alpine · corepack")
+    BUILD("«component»<br/>builder<br/>install --frozen-lockfile · nest build")
+    PDEPS("«component»<br/>prod-deps<br/>install --prod")
+    RUN("«component»<br/>runtime<br/>tini · usuario app · HEALTHCHECK")
 
     BASE --> BUILD & PDEPS
     BUILD -- "dist/" --> RUN
     PDEPS -- "node_modules/" --> RUN
 
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    class BASE,BUILD,PDEPS,RUN app
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    class BASE,BUILD,PDEPS,RUN flow
+    linkStyle default stroke-dasharray:6 4
 ```
 
 - Imagen multi-etapa; la final no tiene devDependencies ni código fuente, corre como usuario sin

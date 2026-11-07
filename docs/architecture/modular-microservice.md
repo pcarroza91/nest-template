@@ -46,11 +46,11 @@ flowchart LR
     subgraph PUB["«zone» Red pública"]
         C(["Cliente<br/>web · móvil · backoffice"])
     end
-    GW["«component»<br/>API Gateway"]
+    GW("«component»<br/>API Gateway")
     subgraph INT["«zone» Red interna"]
-        UP["«component»<br/>Servicios que lo consumen"]
-        MS["«component»<br/>Microservicio"]
-        DOWN["«component»<br/>Servicios que consume"]
+        UP("«component»<br/>Servicios que lo consumen")
+        MS("«component»<br/>Microservicio")
+        DOWN("«component»<br/>Servicios que consume")
         DB[("Base de datos<br/>propia")]
     end
 
@@ -61,18 +61,15 @@ flowchart LR
     DOWN -. "eventos, nunca HTTP de vuelta" .-> MS
     MS -- "lee y escribe" --> DB
 
-    classDef zonePub fill:transparent,stroke:#a07c3b,stroke-dasharray:4 3
-    classDef zoneInt fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    classDef gw fill:transparent,stroke:#475569,stroke-width:2px
-    classDef other fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef main fill:transparent,stroke:#e11d74,stroke-width:4px
-    class PUB zonePub
-    class INT zoneInt
-    class C,DB ext
-    class GW gw
-    class UP,DOWN other
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef main fill:#fde0a3,stroke:#494238,stroke-width:3px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class GW entry
+    class C,UP,DOWN,DB ext
     class MS main
+    class PUB,INT pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 - Cada microservicio es dueño de su base de datos; ningún otro servicio la lee directamente.
@@ -89,34 +86,35 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    BOOT["<b>bootstrap</b><br/>main · app.module<br/>pipes · interceptor · filtro · seguridad"]
-    MOD["<b>modules</b><br/>una carpeta por capacidad de dominio<br/>A usa el contrato público de B, sin ciclos"]
-    HEALTH["<b>health</b><br/>probes"]
-    ORCH["<b>orchestrator</b> (opcional)<br/>procesos de varios pasos<br/>coordina módulos e integraciones"]
-    ORC["<b>integrations</b><br/>un módulo por dominio externo<br/>única salida hacia otros servicios"]
-    COMMON["<b>common</b><br/>contrato de respuesta · excepciones<br/>paginación · guards · decoradores"]
-    CONFIG["<b>config</b><br/>entorno validado · conexión a BD · logger"]
+    BOOT("<b>bootstrap</b><br/>main · app.module<br/>pipes · interceptor · filtro · seguridad")
+    MOD("<b>modules</b><br/>una carpeta por capacidad de dominio<br/>A usa el contrato público de B, sin ciclos")
+    HEALTH("<b>health</b><br/>probes")
+    ORCH("<b>orchestrator</b> (opcional)<br/>procesos de varios pasos<br/>coordina módulos e integraciones")
+    ORC("<b>integrations</b><br/>un módulo por dominio externo<br/>única salida hacia otros servicios")
+    COMMON("<b>common</b><br/>contrato de respuesta · excepciones<br/>paginación · guards · decoradores")
+    CONFIG("<b>config</b><br/>entorno validado · conexión a BD · logger")
 
-    BOOT == "registra" ==> MOD
-    BOOT == "registra" ==> HEALTH
-    BOOT == "registra" ==> ORCH
-    ORCH == "coordina" ==> MOD
-    ORCH == "usa" ==> ORC
-    BOOT == "configura con" ==> CONFIG
-    BOOT == "aplica" ==> COMMON
-    MOD == "usa" ==> COMMON
-    MOD == "pide datos externos" ==> ORC
-    ORC == "usa" ==> COMMON
+    BOOT -- "registra" --> MOD
+    BOOT -- "registra" --> HEALTH
+    BOOT -- "registra" --> ORCH
+    ORCH -- "coordina" --> MOD
+    ORCH -- "usa" --> ORC
+    BOOT -- "configura con" --> CONFIG
+    BOOT -- "aplica" --> COMMON
+    MOD -- "usa" --> COMMON
+    MOD -- "pide datos externos" --> ORC
+    ORC -- "usa" --> COMMON
     COMMON -. "solo el enum de entornos" .-> CONFIG
 
-    classDef app fill:transparent,stroke:#475569,stroke-width:2px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    class BOOT app
-    class MOD,HEALTH,ORC,ORCH feature
-    class CONFIG core
-    class COMMON shared
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class BOOT,HEALTH entry
+    class MOD domain
+    class ORCH,ORC flow
+    class COMMON,CONFIG shared
+    linkStyle default stroke-dasharray:6 4
 ```
 
 | Capa           | Responsabilidad                                                                                                                                                              | Puede depender de                                             | No depende de                                                    |
@@ -334,20 +332,20 @@ Cómo se relacionan las piezas de un módulo. Qué hace cada una está en la [§
 ```mermaid
 flowchart LR
     subgraph MOD["«package» módulo"]
-        CTRL["«component»<br/>controller"]
-        DTO["«component»<br/>models/<br/>dto · enums · interfaces<br/>types · constants"]
-        SVC["«component»<br/>service<br/>coordinación"]
-        BIZ["«component»<br/>business/<br/>reglas"]
-        LIB["«component»<br/>libs/<br/>cálculo puro genérico"]
-        REPO["«component»<br/>repositories/<br/>consultas"]
-        MAP["«component»<br/>mappers/<br/>entidad → DTO"]
-        ENT["«component»<br/>entities/<br/>modelo ORM"]
+        CTRL("«component»<br/>controller")
+        DTO("«component»<br/>models/<br/>dto · enums · interfaces<br/>types · constants")
+        SVC("«component»<br/>service<br/>coordinación")
+        BIZ("«component»<br/>business/<br/>reglas")
+        LIB("«component»<br/>libs/<br/>cálculo puro genérico")
+        REPO("«component»<br/>repositories/<br/>consultas")
+        MAP("«component»<br/>mappers/<br/>entidad → DTO")
+        ENT("«component»<br/>entities/<br/>modelo ORM")
     end
     subgraph COMMON["«package» common"]
-        EXC["«component»<br/>excepciones<br/>de dominio"]
-        PAG["«component»<br/>PaginatedResultDto"]
+        EXC("«component»<br/>excepciones<br/>de dominio")
+        PAG("«component»<br/>PaginatedResultDto")
     end
-    OTHER["«component»<br/>service de<br/>otro módulo"]
+    OTHER("«component»<br/>service de<br/>otro módulo")
     DB[("Base de datos")]
 
     CTRL -- "DTO validado" --> SVC
@@ -366,48 +364,35 @@ flowchart LR
     REPO -.-> PAG
     MAP -.-> DTO
 
-    classDef pkgFeature fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef root fill:transparent,stroke-width:2px
-    classDef comp fill:transparent,stroke:#c79a00,stroke-width:2px
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef store fill:transparent,stroke:#6d45d1,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef pkgShared fill:transparent,stroke:#2f9254,stroke-dasharray:4 3
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class MOD pkgFeature
-    class CTRL root
-    class DTO,MAP,LIB pure
-    class SVC service
-    class BIZ store
-    class REPO,ENT core
-    class COMMON pkgShared
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class CTRL entry
+    class DTO,SVC,BIZ,LIB,REPO,MAP,ENT,OTHER domain
     class EXC,PAG shared
-    class OTHER,DB ext
+    class DB ext
+    class MOD,COMMON pkg
+    linkStyle default stroke-dasharray:6 4
 ```
 
 ## 6. Reglas de dependencia y privacidad
 
 ```mermaid
 flowchart LR
-    APPM["«component»<br/>app.module"] --> M["«component»<br/>Módulo"]
-    X["«component»<br/>Otro módulo"] -- "service exportado" --> S["«component»<br/>Service"]
-    X -- "tipos de DTO y enums" --> D["«component»<br/>models/dto<br/>models/enums"]
-    X -. "✗" .-> R["«component»<br/>Repository · Business · Lib<br/>Mapper · Entidad<br/>models/interfaces · types · constants"]
-    C["«component»<br/>Controller"] -. "✗" .-> R2["«component»<br/>Repository · ORM"]
+    APPM("«component»<br/>app.module") --> M("«component»<br/>Módulo")
+    X("«component»<br/>Otro módulo") -- "service exportado" --> S("«component»<br/>Service")
+    X -- "tipos de DTO y enums" --> D("«component»<br/>models/dto<br/>models/enums")
+    X -. "✗" .-> R("«component»<br/>Repository · Business · Lib<br/>Mapper · Entidad<br/>models/interfaces · types · constants")
+    C("«component»<br/>Controller") -. "✗" .-> R2("«component»<br/>Repository · ORM")
 
-    classDef routes fill:transparent,stroke:#475569,stroke-width:2px
-    classDef page fill:transparent,stroke:#1d4ed8,stroke-width:2px
-    classDef service fill:transparent,stroke:#6a9a12,stroke-width:2px
-    classDef pure fill:transparent,stroke:#6b7280,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    class APPM routes
-    class M,X,C page
-    class S service
-    class D pure
-    class R,R2 core
-    linkStyle 3,4 stroke:#dc2626,stroke-width:3px,color:#dc2626
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    class APPM,C entry
+    class M,X,S,D,R,R2 domain
+    linkStyle default stroke-dasharray:6 4
+    linkStyle 3,4 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
 - El contrato público de un módulo es su **service exportado** y sus **DTOs y enums**
@@ -425,13 +410,14 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A["«component»<br/>Módulo A"] -- "imports: [BModule]<br/>inyecta BService" --> B["«component»<br/>Módulo B"]
+    A("«component»<br/>Módulo A") -- "imports: [BModule]<br/>inyecta BService" --> B("«component»<br/>Módulo B")
     A -- "import type de B/models" --> B
     B -. "✗ ciclo" .-> A
 
-    classDef page fill:transparent,stroke:#1d4ed8,stroke-width:2px
-    class A,B page
-    linkStyle 2 stroke:#dc2626,stroke-width:3px,color:#dc2626
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    class A,B domain
+    linkStyle default stroke-dasharray:6 4
+    linkStyle 2 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
 - Si A necesita **datos** de B, importa `BModule` e inyecta `BService`. Nunca el repository de B.
@@ -441,25 +427,26 @@ flowchart LR
 ```mermaid
 flowchart LR
     subgraph MAL["✗ ciclo"]
-        A1["«component»<br/>Módulo A"] -- "usa" --> B1["«component»<br/>Módulo B"]
+        A1("«component»<br/>Módulo A") -- "usa" --> B1("«component»<br/>Módulo B")
         B1 -- "usa" --> A1
     end
     subgraph BIEN["✓ la pieza común baja"]
-        A2["«component»<br/>Módulo A"] -- "usa" --> C["«component»<br/>Módulo C<br/>pieza común con dominio"]
-        B2["«component»<br/>Módulo B"] -- "usa" --> C
-        A2 -. "sin dominio" .-> COM["«package»<br/>common/"]
+        A2("«component»<br/>Módulo A") -- "usa" --> C("«component»<br/>Módulo C<br/>pieza común con dominio")
+        B2("«component»<br/>Módulo B") -- "usa" --> C
+        A2 -. "sin dominio" .-> COM("«package»<br/>common/")
         B2 -.-> COM
     end
 
-    classDef bad fill:transparent,stroke:#dc2626,stroke-dasharray:4 3
-    classDef good fill:transparent,stroke:#2f9254,stroke-dasharray:4 3
-    classDef page fill:transparent,stroke:#1d4ed8,stroke-width:2px
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    class MAL bad
-    class BIEN good
-    class A1,B1,A2,B2,C page
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef bad fill:transparent,stroke:#dc2626,stroke-width:2px,stroke-dasharray:4 3
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class A1,B1,A2,B2,C domain
     class COM shared
-    linkStyle 0,1 stroke:#dc2626,stroke-width:3px
+    class MAL bad
+    class BIEN pkg
+    linkStyle default stroke-dasharray:6 4
+    linkStyle 0,1 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
 - El grafo entre módulos no tiene ciclos. Si dos módulos se necesitan mutuamente, la pieza común
@@ -478,23 +465,23 @@ sobre a la salida y el filtro global traduce cualquier excepción.
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(225,29,116,0.12) front
+    box rgba(246,193,178,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(100,116,139,0.15) borde
+    box rgba(188,225,255,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(71,85,105,0.15) bootstrap
+    box rgba(188,225,255,0.6) bootstrap
         participant P as Guard · ValidationPipe
         participant I as Interceptor<br/>de respuesta
     end
-    box rgba(29,78,216,0.15) Módulo
+    box rgba(253,224,163,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
         participant M as Mapper
     end
-    box rgba(160,124,59,0.15) externo
+    box rgba(246,193,178,0.6) externo
         participant DB as Base de datos
     end
 
@@ -521,24 +508,24 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(225,29,116,0.12) front
+    box rgba(246,193,178,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(100,116,139,0.15) borde
+    box rgba(188,225,255,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(71,85,105,0.15) bootstrap
+    box rgba(188,225,255,0.6) bootstrap
         participant P as ValidationPipe
         participant I as Interceptor
     end
-    box rgba(29,78,216,0.15) Módulo
+    box rgba(253,224,163,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
         participant B as Business
         participant M as Mapper
     end
-    box rgba(160,124,59,0.15) externo
+    box rgba(246,193,178,0.6) externo
         participant DB as Base de datos
     end
 
@@ -575,24 +562,24 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(225,29,116,0.12) front
+    box rgba(246,193,178,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(100,116,139,0.15) borde
+    box rgba(188,225,255,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(29,78,216,0.15) Módulo
+    box rgba(253,224,163,0.6) Módulo
         participant S as Service
         participant R as Repository
         participant B as Business
     end
-    box rgba(37,99,235,0.15) integrations
+    box rgba(244,208,230,0.6) integrations
         participant O as Client
     end
-    box rgba(47,146,84,0.15) common
+    box rgba(210,231,228,0.6) common
         participant F as Filtro global
     end
-    box rgba(71,85,105,0.15) observabilidad
+    box rgba(210,231,228,0.6) observabilidad
         participant L as Logger
     end
 
@@ -644,17 +631,17 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor U as Usuario
-    box rgba(225,29,116,0.12) front
+    box rgba(246,193,178,0.6) front
         participant FE as App<br/>web · móvil
     end
-    box rgba(100,116,139,0.15) borde
+    box rgba(188,225,255,0.6) borde
         participant GW as API Gateway
     end
-    box rgba(71,85,105,0.15) bootstrap
+    box rgba(188,225,255,0.6) bootstrap
         participant P as ValidationPipe
         participant I as Interceptor
     end
-    box rgba(29,78,216,0.15) Módulo
+    box rgba(253,224,163,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant R as Repository
@@ -688,10 +675,10 @@ Dos piezas opcionales viven en paralelo a `modules/`, y cada una tiene una sola 
 
 ```mermaid
 flowchart TB
-    ORCH["«package» orchestrator/<br/>procesos (opcional)"]
-    MOD["«package» modules/"]
-    INT["«package» integrations/<br/>salida (opcional)"]
-    EXT["«component»<br/>otros servicios"]
+    ORCH("«package» orchestrator/<br/>procesos (opcional)")
+    MOD("«package» modules/")
+    INT("«package» integrations/<br/>salida (opcional)")
+    EXT("«component»<br/>otros servicios")
 
     ORCH -- "service · contrato público" --> MOD
     ORCH -- "client" --> INT
@@ -700,11 +687,14 @@ flowchart TB
     MOD -. "✗" .-> ORCH
     INT -. "✗" .-> MOD
 
-    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class ORCH,MOD,INT pkg
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    class MOD domain
+    class ORCH,INT flow
     class EXT ext
-    linkStyle 4,5 stroke:#dc2626,stroke-width:3px,color:#dc2626
+    linkStyle default stroke-dasharray:6 4
+    linkStyle 4,5 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
 Las §8.1 a §8.5 describen `integrations/`; la §8.6, `orchestrator/`.
@@ -749,16 +739,16 @@ Una integración no tiene controllers, entidades, base de datos ni reglas de neg
 
 ```mermaid
 sequenceDiagram
-    box rgba(29,78,216,0.15) Módulo
+    box rgba(253,224,163,0.6) Módulo
         participant C as Controller
         participant S as Service
         participant B as Business
         participant R as Repository
     end
-    box rgba(37,99,235,0.15) integrations
+    box rgba(244,208,230,0.6) integrations
         participant O as academic.client
     end
-    box rgba(160,124,59,0.15) externo
+    box rgba(246,193,178,0.6) externo
         participant X as ms-academic
     end
 
@@ -885,12 +875,20 @@ src/orchestrator/
 
 ```mermaid
 sequenceDiagram
-    participant C as enrollment-process.controller
-    participant O as Orchestrator
-    participant ST as students.service
-    participant SE as sections.service
-    participant EN as enrollments.service
-    participant EV as Eventos
+    box rgba(188,225,255,0.6) entrada
+        participant C as enrollment-process.controller
+    end
+    box rgba(244,208,230,0.6) orchestrator
+        participant O as Orchestrator
+    end
+    box rgba(253,224,163,0.6) módulos
+        participant ST as students.service
+        participant SE as sections.service
+        participant EN as enrollments.service
+    end
+    box rgba(244,208,230,0.6) eventos
+        participant EV as Eventos
+    end
 
     C->>O: enroll(dto)
     O->>ST: assertEligible(studentId)
@@ -952,28 +950,33 @@ stateDiagram-v2
 flowchart TB
     Q{"¿Tiene dominio?"}
     Q -- "no" --> T{"¿Qué es?"}
-    T -- "lectura de entorno,<br/>conexión, logger" --> CFG["config/"]
-    T -- "respuesta, errores, paginación,<br/>guards, decoradores" --> COM["common/"]
+    T -- "lectura de entorno,<br/>conexión, logger" --> CFG("config/")
+    T -- "respuesta, errores, paginación,<br/>guards, decoradores" --> COM("common/")
     Q -- "sí" --> O{"¿De qué módulo<br/>es dueño?"}
-    O -- "de uno nuevo" --> NEW["copiar el módulo de ejemplo"]
+    O -- "de uno nuevo" --> NEW("copiar el módulo de ejemplo")
     O -- "de uno existente" --> K{"¿Qué hace?"}
-    K -- "recibe HTTP" --> CT["controller"]
-    K -- "coordina pasos" --> SV["service"]
-    K -- "proceso de varios módulos<br/>con escrituras o compensación" --> OC["orchestrator/&lt;proceso&gt;/"]
-    K -- "lógica de negocio" --> BZ["business/"]
-    K -- "cálculo puro genérico" --> LB["libs/"]
-    K -- "consulta o guarda" --> RP["repositories/"]
-    K -- "llama a otro servicio" --> OR["integrations/&lt;dominio&gt;/"]
-    K -- "entidad → salida" --> MP["mappers/"]
-    K -- "DTO, enum, interfaz,<br/>tipo o constante" --> DT["models/"]
-    K -- "forma en la BD" --> EN["entities/"]
+    K -- "recibe HTTP" --> CT("controller")
+    K -- "coordina pasos" --> SV("service")
+    K -- "proceso de varios módulos<br/>con escrituras o compensación" --> OC("orchestrator/&lt;proceso&gt;/")
+    K -- "lógica de negocio" --> BZ("business/")
+    K -- "cálculo puro genérico" --> LB("libs/")
+    K -- "consulta o guarda" --> RP("repositories/")
+    K -- "llama a otro servicio" --> OR("integrations/&lt;dominio&gt;/")
+    K -- "entidad → salida" --> MP("mappers/")
+    K -- "DTO, enum, interfaz,<br/>tipo o constante" --> DT("models/")
+    K -- "forma en la BD" --> EN("entities/")
 
-    classDef shared fill:transparent,stroke:#2f9254,stroke-width:2px
-    classDef core fill:transparent,stroke:#d14343,stroke-width:2px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    class COM shared
-    class CFG core
-    class NEW,CT,SV,BZ,LB,RP,MP,DT,EN,OR,OC feature
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef shared fill:#d2e7e4,stroke:#494238,stroke-width:2px,color:#3c4747
+    class CT entry
+    class NEW,SV,BZ,LB,RP,MP,DT,EN domain
+    class OC,OR flow
+    class CFG,COM shared
+    classDef decision fill:#f6decc,stroke:#494238,stroke-width:2px,color:#3c4747
+    class Q,T,O,K decision
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Un parámetro de negocio (umbral, tasa) vive como constante en el business; pasa a `config/` solo

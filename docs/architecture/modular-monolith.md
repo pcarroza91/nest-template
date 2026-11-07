@@ -30,24 +30,24 @@ cambie integraciones, bindings y datos, no sus módulos ni los de los demás
 
 ```mermaid
 flowchart LR
-    GW["«component»<br/>API Gateway"]
+    GW("«component»<br/>API Gateway")
     subgraph MM["«component» mm-&lt;nombre&gt; · un proceso"]
         subgraph D1["dominio enrollment"]
-            O1["orchestrator/"]
-            M1["modules/"]
-            I1["integrations/"]
+            O1("orchestrator/")
+            M1("modules/")
+            I1("integrations/")
         end
         subgraph D2["dominio academic"]
-            P2["public/"]
-            M2["modules/"]
+            P2("public/")
+            M2("modules/")
         end
-        BUS["bus de eventos<br/>en memoria"]
+        BUS("bus de eventos<br/>en memoria")
     end
     subgraph DB["«component» Base de datos"]
         S1[("schema<br/>enrollment")]
         S2[("schema<br/>academic")]
     end
-    EXT["«component»<br/>servicio externo"]
+    EXT("«component»<br/>servicio externo")
 
     GW -- "/api/enrollment/v1/…" --> M1
     GW -- "/api/enrollment/v1/procesos" --> O1
@@ -62,16 +62,21 @@ flowchart LR
     M2 -. "publica" .-> BUS
     BUS -. "entrega" .-> M1
 
-    classDef pkg fill:transparent,stroke:#2563eb,stroke-dasharray:4 3
-    classDef main fill:transparent,stroke:#e11d74,stroke-width:3px
-    classDef feature fill:transparent,stroke:#2563eb,stroke-width:2px
-    classDef gw fill:transparent,stroke:#475569,stroke-width:2px
-    classDef ext fill:transparent,stroke:#a07c3b,stroke-width:2px
-    class D1,D2 pkg
-    class MM main
-    class O1,M1,I1,P2,M2,BUS feature
-    class GW gw
-    class EXT,DB ext
+    classDef entry fill:#bce1ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef contract fill:#ded5fe,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef ext fill:#f6c1b2,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    classDef system fill:transparent,stroke:#494238,stroke-width:3px
+    class GW entry
+    class M1,M2 domain
+    class O1,I1,BUS flow
+    class P2 contract
+    class S1,S2,EXT ext
+    class D1,D2,DB pkg
+    class MM system
+    linkStyle default stroke-dasharray:6 4
 ```
 
 ## 2. Estructura
@@ -288,16 +293,17 @@ pueden cambiar, desplegarse y extraerse juntos.
 
 ```mermaid
 flowchart LR
-    EN["enrollment"] -- "llama" --> AC["academic"]
-    EN -- "llama" --> ID["identity"]
+    EN("enrollment") -- "llama" --> AC("academic")
+    EN -- "llama" --> ID("identity")
     AC -- "llama" --> ID
-    AC -- "llama" --> CF["configuration"]
+    AC -- "llama" --> CF("configuration")
     AC -. "evento" .-> EN
     AC -. "✗ llamada" .-> EN
 
-    classDef dom fill:transparent,stroke:#2563eb,stroke-width:2px
-    class EN,AC,ID,CF dom
-    linkStyle 5 stroke:#dc2626,stroke-width:3px,color:#dc2626
+    classDef domain fill:#fde0a3,stroke:#494238,stroke-width:2px,color:#3c4747
+    class EN,AC,ID,CF domain
+    linkStyle default stroke-dasharray:6 4
+    linkStyle 5 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
 **Manifiesto.** Las dependencias permitidas se declaran en `architecture/domains.json`. Una
@@ -357,11 +363,15 @@ grafo de imports no muestra. Por eso el manifiesto es la fuente y los imports se
 
 ```mermaid
 flowchart LR
-    A["1 · publicar public/<br/>como paquete de contratos"] --> B["2 · mover domains/&lt;d&gt;/<br/>a ms-&lt;d&gt;"]
-    B --> C["3 · mover su schema<br/>a una BD propia"]
-    C --> D["4 · en los consumidores<br/>integración HTTP del contrato"]
-    D --> E["5 · eventos al broker<br/>con outbox"]
-    E --> F["6 · el gateway envía<br/>/api/&lt;d&gt;/… al ms"]
+    A("1 · publicar public/<br/>como paquete de contratos") --> B("2 · mover domains/&lt;d&gt;/<br/>a ms-&lt;d&gt;")
+    B --> C("3 · mover su schema<br/>a una BD propia")
+    C --> D("4 · en los consumidores<br/>integración HTTP del contrato")
+    D --> E("5 · eventos al broker<br/>con outbox")
+    E --> F("6 · el gateway envía<br/>/api/&lt;d&gt;/… al ms")
+
+    classDef flow fill:#f4d0e6,stroke:#494238,stroke-width:2px,color:#3c4747
+    class A,B,C,D,E,F flow
+    linkStyle default stroke-dasharray:6 4
 ```
 
 Extraer **no es automático**. Las reglas anteriores reducen el cambio, pero estos puntos siempre
