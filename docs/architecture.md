@@ -66,22 +66,42 @@ flowchart TB
 Mapa del repositorio:
 
 ```mermaid
+---
+config:
+  flowchart:
+    nodeSpacing: 12
+    subGraphTitleMargin:
+      top: 4
+      bottom: 14
+---
 flowchart LR
     ROOT("«package» ms-template/")
     subgraph SRC["«package» src/"]
         MAINF("main.ts<br/>app.module.ts")
         CFG("config/<br/>env.validation · configuration<br/>database.config · logger.config")
         subgraph COM["«package» common/"]
-            CDEC("decorators/<br/>@ResponseMessage · @Public<br/>@ApiStandardResponse · @ApiPaginatedResponse")
-            CDTO("dto/ · interfaces/<br/>PaginationQueryDto · PaginatedResultDto<br/>AckResponse · Error · ApiResponse")
-            CEXC("exceptions/<br/>DomainException + 6 subclases")
-            CFIL("filters/ · interceptors/<br/>GlobalExceptionFilter · ResponseInterceptor")
-            CGRD("guards/<br/>JwtAuthGuard (stub)")
+            CDEC("<span style='display:inline-block;width:150px'>decorators</span>")
+            CDTO("<span style='display:inline-block;width:150px'>dto</span>")
+            CEXC("<span style='display:inline-block;width:150px'>exceptions</span>")
+            CFIL("<span style='display:inline-block;width:150px'>filters</span>")
+            CGRD("<span style='display:inline-block;width:150px'>guards</span>")
+            CINT("<span style='display:inline-block;width:150px'>interceptors</span>")
+            CIFC("<span style='display:inline-block;width:150px'>interfaces</span>")
+            CMAP("<span style='display:inline-block;width:150px'>mappers</span>")
+            CPIP("<span style='display:inline-block;width:150px'>pipes</span>")
         end
         HLT("health/")
         subgraph MODS["«package» modules/"]
-            MRES("resource/<br/>ejemplo completo · §11")
-            MIDN("auth · users · organizations · backoffice<br/>auth-methods · sessions · role-assignments<br/>permission-overrides · internal · §13")
+            MRES("<span style='display:inline-block;width:150px'>resource</span>")
+            MAUTH("<span style='display:inline-block;width:150px'>auth</span>")
+            MUSR("<span style='display:inline-block;width:150px'>users</span>")
+            MORG("<span style='display:inline-block;width:150px'>organizations</span>")
+            MBO("<span style='display:inline-block;width:150px'>backoffice</span>")
+            MAM("<span style='display:inline-block;width:150px'>auth-methods</span>")
+            MSES("<span style='display:inline-block;width:150px'>sessions</span>")
+            MRA("<span style='display:inline-block;width:150px'>role-assignments</span>")
+            MPO("<span style='display:inline-block;width:150px'>permission-overrides</span>")
+            MINT("<span style='display:inline-block;width:150px'>internal</span>")
         end
     end
     TST("test/<br/>e2e · sqlite en memoria")
@@ -100,8 +120,8 @@ flowchart LR
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
     class MAINF bootstrap
     class HLT health
-    class MRES,MIDN modules
-    class CDEC,CDTO,CEXC,CFIL,CGRD common
+    class MRES,MAUTH,MUSR,MORG,MBO,MAM,MSES,MRA,MPO,MINT modules
+    class CDEC,CDTO,CEXC,CFIL,CGRD,CINT,CIFC,CMAP,CPIP common
     class CFG config
     class TST,OAS,DCK,DOCS infra
     class ROOT,SRC,COM,MODS pkg
