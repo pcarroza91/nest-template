@@ -165,6 +165,8 @@ export class AcademicPublicModule {}
 @Module({ imports: [AcademicIntegrationModule, …], … }) // su integración (§4), nunca AcademicPublicModule
 
 // domains/enrollment/modules/enrollment/enrollment.service.ts
+import { CoursesContract } from '../../integrations/academic'; // nunca '@domains/academic/public'
+
 constructor(private readonly courses: CoursesContract) {}
 ```
 
@@ -200,7 +202,7 @@ domains/enrollment/integrations/
 ├── common/                              # base HTTP de la MS §8: solo si hay orígenes por HTTP
 ├── academic/                            # otro dominio del monolito
 │   ├── academic-integration.module.ts
-│   └── events.ts                        # reexporta los esquemas de eventos que escucha
+│   └── index.ts                         # reexporta contratos, modelos y eventos que usa
 └── payments/                            # servicio externo: igual que en la MS §8.1
     ├── payments-integration.module.ts
     ├── payments.client.ts
@@ -227,7 +229,9 @@ export class AcademicIntegrationModule {}
 })
 export class AcademicIntegrationModule {}
 
-// domains/enrollment/integrations/academic/events.ts
+// domains/enrollment/integrations/academic/index.ts
+export { AcademicIntegrationModule } from './academic-integration.module';
+export { CoursesContract, type CourseSummary } from '@domains/academic/public';
 export { COURSE_CLOSED, type CourseClosedEvent } from '@domains/academic/public/events';
 ```
 
@@ -240,11 +244,13 @@ export { COURSE_CLOSED, type CourseClosedEvent } from '@domains/academic/public/
 | Una operación combina varios contratos del otro dominio.                     | `<origen>.client.ts` que los combina.                                                                                 |
 | El otro dominio ya fue extraído.                                             | `<Capacidad>HttpClient` que implementa el **mismo contrato** por HTTP ([MS §8.4](modular-microservice.md#84-reglas)). |
 
-- **El module que reexporta no es una capa que reenvía.** No tiene clases ni métodos: su
-  responsabilidad es ser el único lugar donde se decide si el origen está en proceso o es remoto.
+- **El module y el `index.ts` que reexportan no son una capa que reenvía.** No tienen clases ni
+  métodos: son el único lugar donde se decide si el origen está en proceso o es remoto y de dónde
+  vienen sus tipos. Al extraer el origen, `index.ts` pasa a reexportar desde el paquete de
+  contratos y los módulos consumidores no cambian sus imports.
 - **Una clase que solo reenvía métodos** sin traducir, combinar ni salir por HTTP no se crea.
 - **Los eventos de otro dominio también entran por aquí.** El listener vive en el módulo que
-  reacciona ([MS §11](modular-microservice.md#11-eventos)), pero importa el nombre y el esquema del evento desde `integrations/<origen>/`,
+  reacciona ([MS §11](modular-microservice.md#11-eventos)), pero importa el nombre y el esquema del evento desde `integrations/<origen>/index.ts`,
   nunca desde `public/` del otro dominio.
 - **Una integración nunca contiene reglas de negocio** del dominio que consume y nunca importa sus
   `modules/` ni su `orchestrator/` ([MS §3](modular-microservice.md#3-capas)).
@@ -319,7 +325,7 @@ dependencia nueva es un cambio del manifiesto, revisado como cualquier otro:
    A). El script falla con el camino del ciclo.
 3. **`forwardRef` prohibido** fuera de `common/` (regla de ESLint `no-restricted-syntax`): en Nest es
    la forma habitual de esconder un ciclo.
-4. **Suscripciones:** cada evento de otro dominio que reexporta `integrations/<origen>/events.ts`
+4. **Suscripciones:** cada evento de otro dominio que reexporta `integrations/<origen>/index.ts`
    debe estar en su `subscribes`. Un ciclo en el
    grafo de eventos se rechaza salvo que el manifiesto lo marque con su condición de término.
 
