@@ -7,7 +7,7 @@ dentro de él. Esta guía agrega solo lo que ocurre **entre** dominios.
 
 La frontera entre dominios se trata como la frontera entre servicios, para que extraer un dominio
 cambie integraciones, bindings y datos, no sus módulos ni los de los demás
-([§8](#8-extraer-un-dominio)).
+([§10](#10-extraer-un-dominio)).
 
 > **MS §x** remite a la sección x de la [guía del microservicio modular](modular-microservice.md).
 > **§x** sin prefijo remite a esta guía.
@@ -23,71 +23,139 @@ cambie integraciones, bindings y datos, no sus módulos ni los de los demás
 | **Orquestador**      | Coordina un proceso de varios pasos que no pertenece a un solo módulo ([MS §8.6](modular-microservice.md#86-orquestación-de-procesos)). | `domains/<d>/orchestrator/<proceso>/` | No                              |
 | **Evento**           | Hecho ya ocurrido que el dominio publica; su esquema es parte del contrato público ([MS §11](modular-microservice.md#11-eventos)).      | `domains/<d>/public/events/`          | No                              |
 
-| Frontera    | Dureza                             | Qué la cruza                                                                                                            |
-| ----------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Módulo**  | Blanda: dentro del dominio.        | Su service y sus `models/dto` y `models/enums` ([MS §6](modular-microservice.md#6-reglas-de-dependencia-y-privacidad)). |
-| **Dominio** | Dura: como si fuera otro servicio. | Solo su `public/`, y solo hacia `integrations/` del dominio que consume.                                                |
+## 2. Contexto
 
 ```mermaid
 flowchart LR
+    subgraph PUB["«zone» Red pública"]
+        C(["Cliente<br/>web · móvil · backoffice"])
+    end
     GW("«component»<br/>API Gateway")
-    subgraph MM["«component» mm-&lt;nombre&gt; · un proceso"]
-        subgraph D1["dominio enrollment"]
-            O1("orchestrator/")
-            M1("modules/")
-            I1("integrations/")
+    subgraph INT["«zone» Red interna"]
+        UP("«component»<br/>Servicios que lo consumen")
+        MM("«component»<br/>Monolito modular<br/>un proceso · varios dominios")
+        DOWN("«component»<br/>Servicios que consume<br/>incluye ms- extraídos")
+        subgraph DB["«component» Base de datos"]
+            S1[("schema<br/>dominio A")]
+            S2[("schema<br/>dominio B")]
         end
-        subgraph D2["dominio academic"]
-            P2("public/")
-            M2("modules/")
-        end
-        BUS("bus de eventos<br/>en memoria")
     end
-    subgraph DB["«component» Base de datos"]
-        S1[("schema<br/>enrollment")]
-        S2[("schema<br/>academic")]
+
+    C -- "HTTPS + token" --> GW
+    GW -- "/api/&lt;dominio&gt;/v1/…" --> MM
+    UP -- "/api/&lt;dominio&gt;/v1/… · mTLS" --> MM
+    MM -- "integrations · HTTP" --> DOWN
+    DOWN -. "eventos, nunca HTTP de vuelta" .-> MM
+    MM -- "cada dominio, su schema" --> S1
+    MM --> S2
+
+    classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef main fill:#efe2c0,stroke:#494238,stroke-width:3px,color:#3c4747
+    classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
+    class C,UP,DOWN external
+    class GW,S1,S2 infra
+    class MM main
+    class PUB,INT,DB pkg
+    linkStyle default stroke-dasharray:6 4
+```
+
+- **Un proceso, un despliegue, varios dominios.** Hacia afuera es un solo servicio que expone la API
+  de cada dominio.
+- **Una base de datos, un schema por dominio** ([§9](#9-datos-y-consistencia)). Ningún dominio lee
+  el schema de otro, aunque compartan la conexión.
+- **Las rutas llevan el dominio:** `/api/<dominio>/v1/…`. Así, al extraer un dominio, el gateway
+  solo redirige su prefijo al nuevo `ms-` ([§10](#10-extraer-un-dominio)).
+- **Una sola `/health`** para todo el proceso, fuera del prefijo y de la versión de la API.
+- **Entre dominios del mismo proceso no hay HTTP:** se comunican por contratos en proceso
+  ([§5](#5-contratos-públicos)) y eventos en memoria. Solo lo que está fuera del proceso (servicios
+  externos o dominios ya extraídos) se llama por HTTP, siempre desde `integrations/`
+  ([§6](#6-integraciones-la-única-entrada-de-lo-ajeno)).
+- Con un mismo servicio externo, la llamada síncrona va en un solo sentido y la vuelta, por eventos,
+  igual que en la [MS §2](modular-microservice.md#2-contexto).
+
+## 3. Capas
+
+El monolito tiene capas en **dos niveles**: las del **proceso**, compartidas por todos los dominios,
+y las de **cada dominio**, que son las de la [MS §3](modular-microservice.md#3-capas) más `public`.
+
+```mermaid
+flowchart TB
+    BOOT("<b>bootstrap</b><br/>main · app.module<br/>pipes · interceptor · filtro · seguridad")
+    HEALTH("<b>health</b><br/>probes del proceso")
+    subgraph DA["«package» dominio A · consume"]
+        ORCH("<b>orchestrator</b> (opcional)<br/>procesos de varios pasos")
+        MOD("<b>modules</b><br/>capacidades del dominio")
+        INTG("<b>integrations</b><br/>única entrada de lo ajeno")
     end
+    subgraph DB2["«package» dominio B · ofrece"]
+        PUBL("<b>public</b><br/>contratos · modelos · eventos")
+        MODB("<b>modules</b>")
+    end
+    COMMON("<b>common</b><br/>respuesta · excepciones<br/>guards · bus de eventos")
+    CONFIG("<b>config</b><br/>entorno validado · conexión a BD · logger")
     EXT("«component»<br/>servicio externo")
 
-    GW -- "/api/enrollment/v1/…" --> M1
-    GW -- "/api/enrollment/v1/procesos" --> O1
-    GW -- "/api/academic/v1/…" --> M2
-    O1 --> M1
-    M1 --> I1
-    I1 -- "contrato · en proceso" --> P2
-    P2 -. "lo implementa" .-> M2
-    I1 -- "HTTP" --> EXT
-    M1 --> S1
-    M2 --> S2
-    M2 -. "publica" .-> BUS
-    BUS -. "entrega" .-> M1
+    BOOT -- "registra el &lt;d&gt;-domain.module" --> DA
+    BOOT -- "registra" --> DB2
+    BOOT -- "registra" --> HEALTH
+    BOOT -- "configura con" --> CONFIG
+    ORCH -- "coordina" --> MOD
+    ORCH -- "usa" --> INTG
+    MOD -- "pide lo ajeno" --> INTG
+    INTG -- "contrato · en proceso" --> PUBL
+    PUBL -. "lo implementa" .-> MODB
+    INTG -- "HTTP" --> EXT
+    MOD -- "usa" --> COMMON
+    MODB -- "usa" --> COMMON
+    COMMON -. "solo el enum de entornos" .-> CONFIG
+    MOD -. "✗" .-> MODB
 
+    classDef bootstrap fill:#c3e7ff,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef health fill:#b6ecf3,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef modules fill:#efe2c0,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef orchestrator fill:#ffd7dd,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef integrations fill:#f9d9f4,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef public fill:#e0e0ff,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef common fill:#beecdd,stroke:#494238,stroke-width:2px,color:#3c4747
+    classDef config fill:#d5e8c8,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef external fill:#ffd9cb,stroke:#494238,stroke-width:2px,color:#3c4747
-    classDef infra fill:#ded6ce,stroke:#494238,stroke-width:2px,color:#3c4747
     classDef pkg fill:transparent,stroke:#8a857d,stroke-width:1.5px,stroke-dasharray:5 4
-    classDef system fill:transparent,stroke:#494238,stroke-width:3px
-    class M1,M2 modules
-    class O1 orchestrator
-    class I1 integrations
-    class P2 public
-    class BUS common
+    class BOOT bootstrap
+    class HEALTH health
+    class MOD,MODB modules
+    class ORCH orchestrator
+    class INTG integrations
+    class PUBL public
+    class COMMON common
+    class CONFIG config
     class EXT external
-    class GW,S1,S2 infra
-    class D1,D2,DB pkg
-    class MM system
+    class DA,DB2 pkg
     linkStyle default stroke-dasharray:6 4
+    linkStyle 13 stroke:#dc2626,stroke-width:2px,color:#dc2626
 ```
 
-## 2. Estructura
+| Nivel   | Capa           | Responsabilidad                                                                                                                                                                  | Puede depender de                                                                   | No depende de                                   |
+| ------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Proceso | `bootstrap`    | Arrancar, aplicar lo transversal (seguridad, validación, sobre, errores) y registrar el `<d>-domain.module` de cada dominio.                                                     | los dominios, `health`, `common`, `config`                                          | —                                               |
+| Proceso | `health`       | Informar si el proceso y sus dependencias responden. Una sola para todo el monolito.                                                                                            | `common`                                                                            | los dominios                                    |
+| Proceso | `common`       | Piezas transversales sin dominio: sobre de respuesta, excepciones, paginación, guards, bus de eventos en memoria.                                                                | `config` (solo el enum de entornos)                                                 | los dominios                                    |
+| Proceso | `config`       | Leer y validar el entorno; construir la conexión a BD y el logger.                                                                                                               | —                                                                                   | los dominios, `common`                          |
+| Dominio | `public`       | Declarar lo que el dominio ofrece y vincular cada contrato con el service de su módulo dueño ([§5](#5-contratos-públicos)).                                                       | los services de sus propios `modules/`                                              | otro dominio; `integrations`, `orchestrator`    |
+| Dominio | `modules`      | Implementar cada capacidad. Lo de otros dominios lo recibe solo por `integrations/` de su dominio ([§6](#6-integraciones-la-única-entrada-de-lo-ajeno)).                          | `common`, contrato público de otro módulo del dominio, `integrations` de su dominio | otro dominio; `orchestrator`; `config` directo  |
+| Dominio | `orchestrator` | Coordinar un proceso de varios pasos del dominio dueño ([§7](#7-orquestación-entre-dominios)).                                                                                   | contrato público de sus módulos, `integrations` de su dominio, `common`             | otro dominio; otro orchestrator                 |
+| Dominio | `integrations` | Única entrada de lo ajeno: otros dominios por su `public/` (solo los de su `calls` o `subscribes`, [§8](#8-dependencias-entre-dominios-y-ciclos)) y servicios externos por HTTP. | `public/` de los dominios declarados, `common`, `ConfigService`                     | `modules/` ni `orchestrator/` de ningún dominio |
+
+- Las capas del proceso no conocen ningún dominio: si algo de `common/` necesita uno, no es de
+  `common/`.
+- Entre módulos del **mismo** dominio no hay integración: se usa el contrato público del otro
+  módulo, como en la [MS §6.1](modular-microservice.md#61-dependencias-entre-módulos).
+
+## 4. Estructura
 
 ```
 architecture/
-└── domains.json                          # manifiesto: qué dominio depende de cuál (§6)
+└── domains.json                          # manifiesto: qué dominio depende de cuál (§8)
 src/
 ├── domains/
 │   ├── academic/
@@ -99,7 +167,7 @@ src/
 │   │   │   ├── models/                   # tipos de los contratos: serializables
 │   │   │   └── events/                   # esquemas de los eventos que publica
 │   │   ├── modules/                      # anatomía de la MS §4
-│   │   ├── integrations/                 # todo lo que consume de afuera: §4
+│   │   ├── integrations/                 # todo lo que consume de afuera: §6
 │   │   │   ├── identity/                 # otro dominio del monolito (en proceso)
 │   │   │   └── mailer/                   # servicio externo (HTTP)
 │   │   ├── orchestrator/                 # opcional: MS §8.6
@@ -116,20 +184,7 @@ src/
 - `common/` y `config/` son de todos y no tienen dominio, igual que en el microservicio. Si algo de
   `common/` necesita conocer un dominio, no es de `common/`.
 
-**Capas.** Dentro de cada dominio rigen las capas de la
-[MS §3](modular-microservice.md#3-capas). Solo cambia esto:
-
-| Capa           | Además de lo que dice MS §3                                                                                                                                       | Nunca                                           |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `integrations` | Consume también otros dominios del monolito: depende de su `public/`, solo si están en su `calls` o `subscribes` ([§6](#6-dependencias-entre-dominios-y-ciclos)). | `modules/` ni `orchestrator/` de ningún dominio |
-| `modules`      | Recibe lo de otros dominios solo a través de `integrations/` de su dominio ([§4](#4-integraciones-la-única-entrada-de-lo-ajeno)).                                 | Importar otro dominio                           |
-| `orchestrator` | Igual que `modules`: lo de otros dominios llega por `integrations/`.                                                                                              | Importar otro dominio                           |
-| `public`       | Capa nueva: vincula sus contratos con los services de sus propios módulos ([§3](#3-contratos-públicos)).                                                          | Importar otro dominio                           |
-
-Entre módulos del **mismo** dominio no hay integración: se usa el contrato público del otro módulo,
-como en la [MS §6.1](modular-microservice.md#61-dependencias-entre-módulos).
-
-## 3. Contratos públicos
+## 5. Contratos públicos
 
 Un contrato lo **declara quien ofrece la capacidad**, en su `public/`, y lo **implementa el service
 del módulo dueño**. No hay una clase intermedia que solo reenvíe.
@@ -171,7 +226,7 @@ export class CourseService implements CoursesContract {
 export class AcademicPublicModule {}
 
 // domains/enrollment/modules/enrollment/enrollment.module.ts
-@Module({ imports: [AcademicIntegrationModule, …], … }) // su integración (§4), nunca AcademicPublicModule
+@Module({ imports: [AcademicIntegrationModule, …], … }) // su integración (§6), nunca AcademicPublicModule
 
 // domains/enrollment/modules/enrollment/enrollment.service.ts
 import { CoursesContract } from '../../integrations/academic'; // nunca '@domains/academic/public'
@@ -199,7 +254,7 @@ constructor(private readonly courses: CoursesContract) {}
   cambio que rompe crea un contrato nuevo en paralelo (`CoursesContractV2`) y el anterior se marca
   `@deprecated` hasta que el manifiesto no muestre consumidores.
 
-## 4. Integraciones: la única entrada de lo ajeno
+## 6. Integraciones: la única entrada de lo ajeno
 
 Todo lo que un dominio consume de afuera entra por `domains/<consumidor>/integrations/<origen>/`, sea
 **otro dominio del monolito** o un **servicio externo**. Los módulos y el orquestador importan el
@@ -268,9 +323,9 @@ export { COURSE_CLOSED, type CourseClosedEvent } from '@domains/academic/public/
 - **No se separa en `internal/` y `external/`.** La carpeta lleva el nombre del origen, no su
   ubicación: un dominio que se extrae pasa de interno a externo, y separarlas obligaría a mover la
   carpeta y cambiar los imports de cada módulo consumidor, justo lo que esta sección evita. Si un
-  origen es otro dominio del monolito lo dice el manifiesto ([§6](#6-dependencias-entre-dominios-y-ciclos)): está en su `calls`.
+  origen es otro dominio del monolito lo dice el manifiesto ([§8](#8-dependencias-entre-dominios-y-ciclos)): está en su `calls`.
 
-## 5. Orquestación entre dominios
+## 7. Orquestación entre dominios
 
 Un orquestador ([MS §8.6](modular-microservice.md#86-orquestación-de-procesos)) vive en el dominio **dueño del proceso** y usa contratos de otros dominios a
 través de las integraciones de su dominio, igual que los módulos. Además de las reglas de la [MS §8.6](modular-microservice.md#86-orquestación-de-procesos):
@@ -282,7 +337,7 @@ través de las integraciones de su dominio, igual que los módulos. Además de l
   compensación deja el proceso marcado como pendiente.
 - **Lo que no necesita respuesta inmediata va por evento**, no como un paso más del orquestador.
 
-## 6. Dependencias entre dominios y ciclos
+## 8. Dependencias entre dominios y ciclos
 
 Entre dominios hay tres tipos de dependencia, con riesgos distintos:
 
@@ -348,7 +403,7 @@ grafo de imports no muestra. Por eso el manifiesto es la fuente y los imports se
 2. Una de las direcciones pasa a evento, declarado en `subscribes`.
 3. Si los dos dominios siempre cambian juntos, la frontera está mal trazada y se fusionan.
 
-## 7. Datos y consistencia
+## 9. Datos y consistencia
 
 1. Cada dominio tiene su propio schema (o prefijo de tabla, si el motor no tiene schemas) y sus
    propias migraciones.
@@ -363,7 +418,7 @@ grafo de imports no muestra. Por eso el manifiesto es la fuente y los imports se
 '<dominio>/v1'` y sus módulos como `children`, sin `enableVersioning`). Al extraer el dominio, el
    gateway envía ese prefijo al nuevo servicio.
 
-## 8. Extraer un dominio
+## 10. Extraer un dominio
 
 ```mermaid
 flowchart LR
@@ -394,7 +449,7 @@ Lo que **no** debería cambiar: los módulos del dominio extraído, los módulos
 consumidores y los contratos. En cada consumidor cambia solo `integrations/<d>/`. Si un paso exige tocar módulos de otro dominio, una regla de esta sección se rompió
 antes.
 
-## 9. Gobierno
+## 11. Gobierno
 
 | Regla | Descripción                                                                                                                     | Cómo se verifica                                                  |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -413,7 +468,7 @@ antes.
 | AR-13 | No hay llamadas HTTP entre dominios del mismo proceso.                                                                          | Revisión: ninguna integración apunta a la URL del propio monolito |
 | AR-14 | Toda verificación automática corre en CI y bloquea la integración.                                                              | Pipeline                                                          |
 
-## 10. Decisiones pendientes
+## 12. Decisiones pendientes
 
 - **Publicación confiable de eventos.** Publicar después del commit puede perder un evento si el
   proceso cae entre ambos. Un outbox lo evita; falta decidir si se adopta desde el inicio o al
